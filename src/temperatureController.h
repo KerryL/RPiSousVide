@@ -21,20 +21,25 @@ public:
 		TemperatureSensor *sensor, PWMOutput *pwmOut);
 	~TemperatureController();
 
-	void Reset(void) { PIController::Reset(); };
+	void Reset(void);
 	void Update(void);
+	void OutputEnable(bool enabled = true);
 
 	void SetRateLimit(double rate);
 	void SetPlateauTemperature(double temperature);
 
 	double GetActualTemperature(void) const { return actualTemperature; };
 	double GetCommandedTemperature(void) const { return commandedTemperature; };
+	bool TemperatureSensorOK(void) const;
 
+	double GetPWMDuty(void) const;
 	bool OutputIsSaturated(void) const;
 
 private:
 	TemperatureSensor* const sensor;
 	PWMOutput* const pwmOut;
+
+	bool enabled;
 
 	double rate;// [deg F/sec]
 	double plateauTemperature;// [deg F]

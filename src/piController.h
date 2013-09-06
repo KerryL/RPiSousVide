@@ -9,7 +9,7 @@
 class PIController
 {
 public:
-	PIController(double timeStep, double kp = 1.0, double ki = 0.0);
+	PIController(double timeStep, double kp = 1.0, double ti = 0.0);
 
 	void SetKp(double kp);
 	void SetTi(double ti);

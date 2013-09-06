@@ -8,7 +8,8 @@
 
 // Standard C++ headers
 #include <string>
-#include <time.h>
+#include <ctime>
+#include <fstream>
 
 // Local headers
 #include "sousVideConfig.h"
@@ -16,6 +17,8 @@
 // Local forward declarations
 class NetworkInterface;
 class TemperatureController;
+class GPIO;
+class TimeHistoryLog;
 
 class SousVide
 {
@@ -23,13 +26,7 @@ public:
 	SousVide();
 	~SousVide();
 
-	void Run();
-
-private:
-	SousVideConfig configuration;
-	bool ReadConfiguration(void);
-
-	double timeStep;
+	void Run(void);
 
 	enum State
 	{
@@ -44,24 +41,33 @@ private:
 		StateCount
 	};
 
+private:
+	static const std::string configFileName;
+	SousVideConfig configuration;
+	bool ReadConfiguration(void);
+
+	double timeStep;// [sec]
+	double plateauTemperature;// [deg F]
+	double soakTime;// [sec]
+
+	// For maintaining timing statistics
+	void UpdateTimingStatistics(double elapsed);
+	static double AverageVector(const std::vector<double> &values);
+	unsigned int keyElement, maxElements;
+	std::vector<double> frameTimes, busyTimes;// [sec]
+	clock_t lastUpdate;
+
 	NetworkInterface *ni;
 	TemperatureController *controller;
+	GPIO *pumpRelay;
 
-	// Methods for doing the cooking
-	//bool Cook(double temperature, double soakTime);
-	/*void SetPumpRelay(bool on);
-	void SetHeaterRelay(bool on);*/
-	// Spawn a thread for bit-banging PWM?
-	
-	// TODO:
-	// Provide means for scheduling start/stop (duration based on meat + thickness + tables?)
-	// Provide means to display current temp + soak time + temp history?
-	// If we control start/stop with this thing, do we have relay for pump, too?
-	// Any feedback to ensure pump is running?  Assume increasing temperature feedback is good enough?
+	TimeHistoryLog *thLog;
+	std::ofstream *thLogFile;
+	std::string GetLogFileName(void) const;
+	void SetUpTimeHistoryLog(void);
+	void CleanUpTimeHistoryLog(void);
 
-	// TODO:  Logging
-
-	// State machine
+	// Finite state machine
 	State state, nextState;
 	time_t stateStartTime;
 
@@ -73,6 +79,8 @@ private:
 	std::string GetStateName(void);
 
 	bool InterlocksOK(void);
+	void EnterActiveState(void);
+	void ExitActiveState(void);
 };
 
 #endif// SOUS_VIDE_H_

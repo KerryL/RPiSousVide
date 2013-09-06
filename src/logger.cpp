@@ -1,0 +1,44 @@
+// File:  logger.h
+// Date:  9/3/2013
+// Auth:  K. Loux
+// Desc:  Generic logging object.  Note that this class is NOT thread-safe!
+
+// Standard C++ headers
+#include <ctime>
+#include <iomanip>
+
+// Local headers
+#include "logger.h"
+
+//==========================================================================
+// Class:			Logger
+// Function:		GetTimeStamp
+//
+// Description:		Returns a time stamp string to prepend to each message.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		std::string containing the formatted time stamp
+//
+//==========================================================================
+std::string Logger::LoggerStreamBuffer::GetTimeStamp(void)
+{
+	time_t now(time(NULL));
+	struct tm* timeInfo = localtime(&now);
+
+	std::stringstream timeStamp;
+	timeStamp.fill('0');
+	timeStamp << timeInfo->tm_year + 1900 << "-"
+		<< std::setw(2) << timeInfo->tm_mon + 1 << "-"
+		<< std::setw(2) << timeInfo->tm_mday << " "
+		<< std::setw(2) << timeInfo->tm_hour << ":"
+		<< std::setw(2) << timeInfo->tm_min << ":"
+		<< std::setw(2) << timeInfo->tm_sec;
+
+	return timeStamp.str();
+}

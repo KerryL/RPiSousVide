@@ -9,28 +9,28 @@
 // Standard C++ headers
 #include <string>
 
-// Local headers
-// TODO:  Socket class!
-
 // Local forward declarations
 struct NetworkConfiguration;
 struct FrontToBackMessage;
 struct BackToFrontMessage;
+class Socket;
 
 class NetworkInterface
 {
 public:
 	NetworkInterface(NetworkConfiguration configuration);
+	~NetworkInterface();
 
 	bool ReceiveData(FrontToBackMessage &message);
 	bool SendData(BackToFrontMessage &message);
 
 private:
-	static const std::string loopback;
-	const unsigned int listenPort;
-	const unsigned int talkPort;
+	const unsigned int port;
 
-	// TODO:  Sockets
+	/*unsigned char overflowBuffer[overflowMaxSize];
+	unsigned long overflowBufferSize;*/
+
+	Socket *socket;
 };
 
 #endif// NETWORK_MESSAGE_DEFS_H_

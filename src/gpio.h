@@ -24,6 +24,7 @@ public:
 	};
 
 	GPIO(int pin, DataDirection direction = DirectionInput);
+	virtual ~GPIO();
 
 	void SetDataDirection(DataDirection direction);
 	void SetPullUpDown(PullResistance state);

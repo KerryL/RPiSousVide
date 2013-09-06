@@ -12,14 +12,69 @@
 // Local headers
 #include "gpio.h"
 
-// Pin numbers refer to wiring pi pin numbers
-// See:  https://projects.drogon.net/raspberry-pi/wiringpi/pins/
+//==========================================================================
+// Class:			GPIO
+// Function:		GPIO
+//
+// Description:		Constructor for GPIO class.
+//
+// Input Arguments:
+//		pin			= int, pin number using Wiring Pi numbering scheme.
+//					  See:  http://wiringpi.com/pins/
+//		direction	= DataDirection
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
 GPIO::GPIO(int pin, DataDirection direction) : pin(pin)
 {
 	assert(pin >= 0 && pin <= 20);
 	SetDataDirection(direction);
 }
 
+//==========================================================================
+// Class:			GPIO
+// Function:		~GPIO
+//
+// Description:		Destructor for GPIO class.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+GPIO::~GPIO()
+{
+	// Turn everything off
+	digitalWrite(pin, 0);
+	pullUpDnControl(pin, PUD_OFF);
+}
+
+//==========================================================================
+// Class:			GPIO
+// Function:		SetDataDirection
+//
+// Description:		Sets the data direction for the pin.
+//
+// Input Arguments:
+//		direction	= DataDirection
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
 void GPIO::SetDataDirection(DataDirection direction)
 {
 	assert(direction != DirectionPWMOutput || pin == 1);
@@ -40,6 +95,22 @@ void GPIO::SetDataDirection(DataDirection direction)
 		assert(false);
 }
 
+//==========================================================================
+// Class:			GPIO
+// Function:		SetPullUpDown
+//
+// Description:		Sets the state of the optional internal pull-up/pull-down resistors.
+//
+// Input Arguments:
+//		state	= PullResistance
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
 void GPIO::SetPullUpDown(PullResistance state)
 {
 	// TODO:  Is this assertion necessary?
@@ -55,6 +126,22 @@ void GPIO::SetPullUpDown(PullResistance state)
 		assert(false);
 }
 
+//==========================================================================
+// Class:			GPIO
+// Function:		SetOutput
+//
+// Description:		Sets the state of the output pin.
+//
+// Input Arguments:
+//		high	= bool, true for high, false for low
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
 void GPIO::SetOutput(bool high)
 {
 	assert(direction == DirectionOutput);
@@ -62,6 +149,22 @@ void GPIO::SetOutput(bool high)
 	digitalWrite(pin, high ? 1 : 0);
 }
 
+//==========================================================================
+// Class:			GPIO
+// Function:		GetInput
+//
+// Description:		Reads the status of the input pin.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for high, false otherwise
+//
+//==========================================================================
 bool GPIO::GetInput(void)
 {
 	assert(direction == DirectionInput);

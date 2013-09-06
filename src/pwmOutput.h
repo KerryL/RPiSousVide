@@ -1,7 +1,7 @@
 // File:  pwmOutput.h
 // Date:  8/31/2013
 // Auth:  K. Loux
-// Desc:  C++ wrapper for Wiring Pi PWM methods.
+// Desc:  C++ wrapper for Wiring Pi PWM methods.  Currently supports only hardware PWM.
 
 #ifndef PWM_OUTPUT_H_
 #define PWM_OUTPUT_H_
@@ -20,17 +20,15 @@ public:
 
 	PWMOutput(int pin = 1, PWMMode mode = ModeBalanced);
 
-	void SetPWMFrequency(double frequency);
 	void SetDutyCycle(double duty);
 	void SetMode(PWMMode mode);
-	void SetRange(unsigned int range);
 
 	double GetDutyCycle(void) const { return duty; }
 
 private:
 	double frequency;// [Hz]
 	double duty;// [%]
-	unsigned int range;
+	/*static */const unsigned int range;
 };
 
 #endif// PWM_OUTPUT_H_
