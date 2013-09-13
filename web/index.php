@@ -1,141 +1,81 @@
+<?php
+/**
+ * index.php
+ *
+ * Main web interface to Rasberry Pi Sous Vide temperature controller
+ * 
+ * @author Matt Jarvis
+ * @copyright Copyright (C) 2013 Matt Jarvis
+ * @package RPiSousVide
+ * @license GNU General Public License v2.0 (http://www.gnu.org/licenses/gpl-2.0.html)
+ */
+
+    require_once("WebSettings.php");
+    require_once("ControllerManager.php");
+
+    $settings   = WebSettings::GetInstance();
+    $controller = new ControllerManager();
+?>
+
 <!doctype html>
 <html>
-	<head>
-		<title>Rasberry Pi Sous Vide Controller</title>
-		<style>
-			
-			html {
-				height: 100%;
-			}
+    <head>
+        <title>Rasberry Pi Sous Vide Controller</title>
+        <link href="styles.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        <div id="wrapper">
 
-			table {
-				border: 0;
-			}
-			body {
-				background-image: linear-gradient(0deg, rgb(240,240,240), rgb(210,210,210));
-				height: 100%;
-				margin: 0;
-				background-repeat: no-repeat;
-				background-attachment: fixed;
-				font-family: Arial, Helvetica, sans-serif;
-			}
+            <div class="pageHeader">
+            <h1>Rasberry Pi Sous Vide Controller</h1>
+            </div>
 
-			.pageHeader h1 {
-				font-family: Arial, Helvetica, sans-serif;
-				color: rgb(100,100,100);
-				text-shadow: 1px 1px 2px rgb(200,200,200);
-				padding: 5px;
-				border-bottom: 2px solid rgb(100,100,100);
-				font-family: Tahoma, Helvetica, sans-serif;
+            <div class="mainPanel">
+                <h2>Temperature Control</h2>
+                <p>Basic temperature control panel plus temperature vs time graph (javascript refresh?)</p>
+                
+                <span class="controlPanel">
+                    <form id="tempControlPanel" action="">
+                    <table>
+                        <tr>
+                            <td class="labelDisplay">Temp:</td>
+                            <td>
+                                <span class="valueDisplay"><?php echo $controller->GetTemperature(); ?></span>
+                                <span class="valueSuffix"><?php echo $controller->GetUnitSuffix(); ?></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="labelDisplay">Set:</td>
+                            <td>
+                                <input class="valueDisplay" type="text" name="setpoint" value="<?php echo $controller->GetSetpoint(); ?>" />
+                                <span class="valueSuffix"><?php echo $controller->GetUnitSuffix(); ?></span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <div class="buttonHolder">
+                                    <input class="updateButton" type="submit" name="submit_setpoint" value="Update Setpoint" />
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    </form>
+                </span>
 
-			}
+                <div class="graphPanel">
+                    <p>Graph Goes Here</p>
+                </div>
+            </div>
 
-			.mainPanel {
-				border: 1px solid rgb(100, 100, 100);
-				border-radius: 5px;
-				margin: 10px 0px 10px 0px;
-				padding: 10px;
-				box-shadow: 2px 2px 4px rgb(150, 150, 150);
-				background-color: rgb(250, 250, 250);
-				white-space: nowrap;
-			}
+            <div class="mainPanel">
+                <h2>Device Status</h2>
+                <p>State checks made to C++ controller software via network socket go here</p>
+                <div>
+                    <a href="settings_page.php" class="updateButton">Edit Settings</a>
+                </div>
+                
+            </div>
 
-			.mainPanel h2 {
-				margin: 0;
-				font-family: Tahoma, Helvetica, sans-serif;
-				text-shadow: 1px 1px 2px rgb(200,200,200);
-				color: rgb(100,100,100);
-			}
-
-			.controlPanel {
-				display: inline-block;
-			
-			}
-
-			.labelDisplay {
-				text-align: right;
-				font-size: 1.5em;
-				font-weight: bold;
-			}
-
-			.valueDisplay {
-				display: inline-block;
-				width: 4em;
-				text-align: center;
-				border: 1px solid rgb(100,100,100);
-				font-size: 1.5em;
-				border-radius: 3px;
-
-			}
-
-			.buttonHolder {
-				text-align: right;
-			}
-			.updateButton {
-				font-size: 1.1em;
-				background-color: rgb(100, 100, 200);
-				color: rgb(255, 255, 255);
-				border-radius: 3px;
-				border: 1px solid rgb(100, 100, 100);
-			}
-
-			.graphPanel {
-				height: 400px;
-				text-align: center;
-				color: rgb(200, 200, 200);
-				border: 1px dashed rgb(200, 200, 200);
-			}
-
-			#wrapper {
-				margin-left: 44px;
-				margin-right: 44px;
-				border-radius: 5px;
-				
-			}
-		</style>
-	</head>
-	<body>
-		<div id="wrapper">
-
-			<div class="pageHeader">
-			<h1>Rasberry Pi Sous Vide Controller</h1>
-			</div>
-
-			<div class="mainPanel">
-				<h2>Temperature Control</h2>
-				<p>Basic temperature control panel plus temperature vs time graph (javascript refresh?)</p>
-				
-				<span class="controlPanel">
-					<form id="tempControlPanel" action="">
-					<table>
-						<tr>
-							<td class="labelDisplay">Temp:</td>
-							<td><span class="valueDisplay">100</span></td>
-						</tr>
-						<tr>
-							<td class="labelDisplay">Set:</td>
-							<td><input class="valueDisplay" type="text" name="setpoint" /></td>
-						</tr>
-						<tr>
-							<td colspan="2">
-								<div class="buttonHolder">
-									<input class="updateButton" type="submit" name="submit_setpoint" value="Update Setpoint" />
-								</div>
-							</td>
-						</tr>
-					</table>
-					</form>
-				</span>
-
-				<div class="graphPanel">
-					<p>Graph Goes Here</p>
-				</div>
-			</div>
-
-			<div class="mainPanel">
-				<h2>Device Status</h2>
-				<p>State checks made to C++ controller software via network socket go here</p>
-			</div>
-		</div>
-	</body>
+        </div>
+    </body>
 </html>

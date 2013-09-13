@@ -1,0 +1,40 @@
++=============================================================================+
+|  Webserver Setup                                                            |
++=============================================================================+
+    Matt Jarvis, 09/13/2013
+
+
+Instructions for setting up web interface on test Ubuntu server:
+-------------------------------------------------------------------------------
+
+    * NOTE: this should be pretty similar for setting up under the
+            RPi, but I don't yet have one so you'll have to improvise
+            on the hard parts
+
+    1. Get an apache webserver and php set up
+        $ sudo apt-get install apache2
+        $ sudo apt-get install php5
+        $ sudo apt-get install libapache2-mod-php5
+        $ sudo /etc/init.d/apache2 restart
+
+    2. Move the contents of the ./web/ folder to /var/www/
+       Navigate to the "web" folder and copy everything over.  You will
+       probably need to sudo it, since you won't have permission otherwise.
+       I usually solve this problem myself by assigning myself to a group
+       and granting ownership of /var/www and everything in it to the group,
+       but this is the quick and dirty way.
+        $ sudo cp * /var/www/
+
+    3. Figure out what "user" is running the apache process.
+        $ ps aux | grep apache
+
+       The user is the first column, most of them should be something like 
+       "www-data".  We need to give that user ownership in order for the
+       settings file to be written.
+
+    4. Recursively assign ownership to everything in /var/www.  Assuming
+       your user was "www-data":
+        $ sudo chown -R www-data:nogroup /var/www
+
+    5. That's it.  You can http://localhost in a browser or get the
+       server's IP address and hit it from a browser in another computer.
