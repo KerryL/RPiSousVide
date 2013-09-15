@@ -30,9 +30,13 @@ Again, cross-compiling makes stuff more difficult.  The instructions above are f
 - change the makefile (wiringPi/wiringPi/Makefile), line 36 to use the cross-compiler built in step 2 above.  If you follow exactly as the instructions are writting, the compiler would be arm-unknown-linux-gnueabi-g++.  Also, the makefile doesn't define macros for the archiver and ranlib.  You'll need to define those yourself and use those found in the x-tools binary directory you built, then use them in place of ar and ranlib below.
 - the INSTALL file has instructions for building a statically-linked library.  If we cross-compile, our options are either link it statically, or install it on the Pi, too, in order to use the dynamic library (which is what builds by default).  I'm shooting for statically linking, at first, anyway, we'll see how it goes.
 
-5.  Build RPiSousVide using the included make file (make changes as appropriate if you didn't exactly follow the instructions above), and copy to your Raspberry Pi.
+5.  Build RPiSousVide using the included makefile (make changes as appropriate if you didn't exactly follow the instructions above), and copy to your Raspberry Pi.  Note that re-building can be carried out by using '$make clean' followed by '$make' if using the included makefile.
 
 6.  Configure Raspberry Pi to use application as a service... TODO - let's get the thing built first
 
 7.  Describe required connections, hardware plans, anything else? TODO
 https://projects.drogon.net/raspberry-pi/wiringpi/pins/
+
+
+TESTING
+In the test directory is a makefile that will build a series of test applications for verifying the functionality of selected classes upon which the main application is built.  All test binaries are written to test/bin.  All binaries are cross-compiled by default, although it would not be difficult to change a makefile to use g++, if you wanted to test the sockets on something other than a Raspberry Pi, for example.

@@ -8,6 +8,8 @@
 #include <cassert>
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
+#include <sstream>
 
 // *nix headers
 #include <stdio.h>
@@ -15,6 +17,8 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <netdb.h>
+#include <signal.h>
 
 // Local headers
 #include "linuxSocket.h"
@@ -39,6 +43,7 @@ using namespace std;
 //==========================================================================
 const unsigned int LinuxSocket::maxMessageSize = 1024;
 const unsigned int LinuxSocket::maxConnections = 5;
+const unsigned int LinuxSocket::selectTimeout = 5;// [sec]
 
 //==========================================================================
 // Class:			LinuxSocket
@@ -58,10 +63,9 @@ const unsigned int LinuxSocket::maxConnections = 5;
 //==========================================================================
 LinuxSocket::LinuxSocket(SocketType type, ostream& outStream) : type(type), outStream(outStream)
 {
-	clientMessageReady = 0;
+	clientMessageSize = 0;
 	pthread_mutex_init(&bufferMutex, NULL);
 
-	sendBuffer = new unsigned char[maxMessageSize];
 	rcvBuffer = new unsigned char[maxMessageSize];
 }
 
@@ -87,9 +91,6 @@ LinuxSocket::~LinuxSocket()
 	if (type == SocketTCPServer)
 		pthread_join(listenerThread, NULL);// TODO:  Add messaging/check return values here?
 	pthread_mutex_destroy(&bufferMutex);// TODO:  Add messaging/check return values here?
-
-	delete [] sendBuffer;
-	sendBuffer = NULL;
 
 	delete [] rcvBuffer;
 	rcvBuffer = NULL;
@@ -136,11 +137,10 @@ bool LinuxSocket::Create(const unsigned short &port, const string &target)
 
 	outStream << "  Created " << GetTypeString(type) << " socket with id " << sock << endl;
 
-	if (IsServer())
-		return Bind(AssembleAddress(port, target));
-	else if (type == TCPClient)
+	if (type == SocketTCPClient)
 		return Connect(AssembleAddress(port, target));
-	//else if UDPClient
+	else// TCP Servers and any UDP socket
+		return Bind(AssembleAddress(port, target));
 	return true;
 }
 
@@ -163,12 +163,12 @@ bool LinuxSocket::Create(const unsigned short &port, const string &target)
 //==========================================================================
 sockaddr_in LinuxSocket::AssembleAddress(const unsigned short &port, const std::string &target)
 {
-	assert(!IsServer() || !target.empty());
+//	assert(!IsServer() || !target.empty());
 
 	sockaddr_in address;
 	memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
-	if (target.emtpy())
+	if (target.empty())
 		address.sin_addr.s_addr = htonl(INADDR_ANY);//inet_addr(GetBestLocalIPAddress(target).c_str());
 	else
 		address.sin_addr.s_addr = inet_addr(target.c_str());//inet_addr(GetBestLocalIPAddress(target).c_str());
@@ -200,16 +200,38 @@ bool LinuxSocket::Bind(const sockaddr_in &address)
 
 	if (bind(sock, (struct sockaddr*)&address, sizeof(address)) == SOCKET_ERROR)
 	{
-		outStream << "  Bind to port " << port << " failed:  " << GetLastError() << endl;
+		outStream << "  Bind to port " << ntohs(address.sin_port) << " failed:  " << GetLastError() << endl;
 		return false;
 	}
 
-	outStream << "  Socket " << sock << " successfully bound to port " << port << endl;
+	outStream << "  Socket " << sock << " successfully bound to port " << ntohs(address.sin_port) << endl;
 
 	if (type == SocketTCPServer)
 		return Listen();
 
 	return true;
+}
+
+//==========================================================================
+// Class:			friend of LinuxSocket
+// Function:		LaunchThread
+//
+// Description:		Listener thread entry point (launches member function).
+//
+// Input Arguments:
+//		pThisSocket =	void* (really a pointer to a LinuxSocket)
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		void*
+//
+//==========================================================================
+void *LaunchThread(void *pThisSocket)
+{
+	static_cast<LinuxSocket*>(pThisSocket)->ListenThreadEntry();
+	return NULL;
 }
 
 //==========================================================================
@@ -233,15 +255,22 @@ bool LinuxSocket::Listen(void)
 {
 	continueListening = true;
 
-	if (listen(service, maxConnections) == SOCKET_ERROR)
+	// TODO:  Move this to a better place?
+	// TCP severs crash if writing to a broken pipe, if we don't explicitly ignore the error
+	signal(SIGPIPE, SIG_IGN);
+/*	int optval(1);
+	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == SOCKET_ERROR)
+		cout << "Error setting socket options" << endl;*/
+
+	if (listen(sock, maxConnections) == SOCKET_ERROR)
 	{
-		outStream << "  Listen on port " << port << " failed:  " << GetLastError() << endl;
+		outStream << "  Listen on socket ID " << sock << " failed:  " << GetLastError() << endl;
 		return false;
 	}
 
-	outStream << "  Socket " << sock << " listening on port " << port << endl;
+	outStream << "  Socket " << sock << " listening" << endl;
 
-	if (pthread_create(&listenerThread, NULL, (void*)&LinuxSocket::ListenThreadEntry, NULL) == 0)
+	if (pthread_create(&listenerThread, NULL, &LaunchThread, (void*)this) == 0)
 	{
 		outStream << "  Spawned listening thread with ID " << listenerThread << endl;
 		return true;
@@ -260,7 +289,7 @@ bool LinuxSocket::Listen(void)
 //					thread.
 //
 // Input Arguments:
-//		void* (unused)
+//		None
 //
 // Output Arguments:
 //		None
@@ -269,17 +298,21 @@ bool LinuxSocket::Listen(void)
 //		None
 //
 //==========================================================================
-void LinuxSocket::ListenThreadEntry(void*)
+void LinuxSocket::ListenThreadEntry(void)
 {
-	FD_ZERO(&socks);
-	FD_SET(sock, &socks);
+	FD_ZERO(&clients);
+	FD_SET(sock, &clients);
 	maxSock = sock;
 
-	unsigned int s;
+	struct timeval timeout;
+	timeout.tv_sec = selectTimeout;
+	timeout.tv_usec = 0;
+
+	int s;
 	while (continueListening)
 	{
 		readSocks = clients;
-		if (select(maxSock + 1, &readSocks, NULL, NULL, NULL) == SOCKET_ERROR)
+		if (select(maxSock + 1, &readSocks, NULL, NULL, &timeout) == SOCKET_ERROR)
 		{
 			// Failed to accept connection
 			// TODO:  message?  Logger is not thread-safe...
@@ -296,7 +329,7 @@ void LinuxSocket::ListenThreadEntry(void*)
 				{
 					int newSock;
 					struct sockaddr_in clientAddress;
-					size_t size = sizeof(struct sockaddr_in);
+					unsigned int size = sizeof(struct sockaddr_in);
 					newSock = accept(sock, (struct sockaddr*)&clientAddress, &size);
 					if (newSock == SOCKET_ERROR)
 					{
@@ -304,6 +337,8 @@ void LinuxSocket::ListenThreadEntry(void*)
 						// TODO:  message?  Logger is not thread-safe...
 						continue;
 					}
+
+					cout << "connection from: " << inet_ntoa(clientAddress.sin_addr) << ":" << ntohs(clientAddress.sin_port) << endl;
 
 					FD_SET(newSock, &clients);
 					if (newSock > maxSock)
@@ -318,7 +353,7 @@ void LinuxSocket::ListenThreadEntry(void*)
 
 //==========================================================================
 // Class:			LinuxSocket
-// Function:		ConnHandleClientect
+// Function:		HandleClient
 //
 // Description:		Handles incomming requests from client sockets.
 //
@@ -342,7 +377,7 @@ void LinuxSocket::HandleClient(int newSock)
 	if (clientMessageSize <= 0)
 	{
 		// TODO:  Message?  through some thread-safe means?
-		FD_CLR(newSock, clients);
+		FD_CLR(newSock, &clients);
 		close(newSock);
 	}
 }
@@ -367,11 +402,11 @@ bool LinuxSocket::Connect(const sockaddr_in &address)
 {
 	if (connect(sock, (struct sockaddr*)&address, sizeof(address)) < 0)
 	{
-		outStream << "  Connect to " << port << " failed:  " << GetLastError() << endl;
+		outStream << "  Connect to " << ntohs(address.sin_port) << " failed:  " << GetLastError() << endl;
 		return false;
 	}
 
-	outStream << "  Socket " << sock << " on port " << port << " succesfully connected" << endl;
+	outStream << "  Socket " << sock << " on port " << ntohs(address.sin_port) << " successfully connected" << endl;
 
 	return true;
 }
@@ -491,7 +526,8 @@ int LinuxSocket::Receive(void)
 //					the message.
 //
 // Input Arguments:
-//		sock	= int
+//		sock		= int
+//		senderAddr	= struct sockaddr_in*
 //
 // Output Arguments:
 //		None
@@ -504,8 +540,8 @@ int LinuxSocket::DoReceive(int sock, struct sockaddr_in *senderAddr)
 {
 	if (senderAddr)
 	{
-		int addrSize = sizeof(*senderAddr);
-		return recvfrom(sock, rcvBuffer, maxMessageSize, 0, senderAddr, &addrSize);
+		socklen_t addrSize = sizeof(*senderAddr);
+		return recvfrom(sock, rcvBuffer, maxMessageSize, 0, (struct sockaddr*)senderAddr, &addrSize);
 	}
 	else
 	{
@@ -522,7 +558,7 @@ int LinuxSocket::DoReceive(int sock, struct sockaddr_in *senderAddr)
 // Input Arguments:
 //		addr		= const char* containing the destination IP for the message
 //		port		= const short& specifying the destination port for the message
-//		buffer		= void* pointing to the message body contents
+//		buffer		= const void* pointing to the message body contents
 //		bufferSize	= const int& specifying the size of the message
 //
 // Output Arguments:
@@ -533,14 +569,14 @@ int LinuxSocket::DoReceive(int sock, struct sockaddr_in *senderAddr)
 //
 //==========================================================================
 bool LinuxSocket::UDPSend(const char *addr, const short &port,
-	void *buffer, const int &bufferSize)
+	const void *buffer, const int &bufferSize)
 {
 	assert(!IsTCP());
 
 	struct sockaddr_in targetAddress = AssembleAddress(port, addr);
 
 	int bytesSent = sendto(sock, buffer, bufferSize, 0,
-		(struct sockaddr_in*)&targetAddress, sizeof(targetAddress));
+		(struct sockaddr*)&targetAddress, sizeof(targetAddress));
 
 	if (bytesSent == SOCKET_ERROR)
 	{
@@ -566,7 +602,7 @@ bool LinuxSocket::UDPSend(const char *addr, const short &port,
 // Description:		Sends a message to the connected server (TCP).
 //
 // Input Arguments:
-//		buffer		= void* pointing to the message body contents
+//		buffer		= const void* pointing to the message body contents
 //		bufferSize	= const int& specifying the size of the message
 //
 // Output Arguments:
@@ -576,9 +612,12 @@ bool LinuxSocket::UDPSend(const char *addr, const short &port,
 //		bool, true for success, false otherwise
 //
 //==========================================================================
-bool LinuxSocket::TCPSend(void *buffer, const int &bufferSize)
+bool LinuxSocket::TCPSend(const void *buffer, const int &bufferSize)
 {
 	assert(IsTCP());
+
+	if (IsServer())
+		return TCPServerSend(buffer, bufferSize);
 
 	int bytesSent = send(sock, buffer, bufferSize, 0);
 
@@ -590,13 +629,56 @@ bool LinuxSocket::TCPSend(void *buffer, const int &bufferSize)
 
 	if (bytesSent != bufferSize)
 	{
-		outStream << "  Wrong number of bytes sent (TCP) to "
-			<< inet_ntoa(targetAddress.sin_addr) << ":"
-			<< ntohs(targetAddress.sin_port) << endl;
+		outStream << "  Wrong number of bytes sent (TCP)" << endl;
 		return false;
 	}
 
 	return true;
+}
+
+//==========================================================================
+// Class:			LinuxSocket
+// Function:		TCPServerSend
+//
+// Description:		Sends a message to all of the connected clients (TCP).
+//
+// Input Arguments:
+//		buffer		= const void* pointing to the message body contents
+//		bufferSize	= const int& specifying the size of the message
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for success, false otherwise
+//
+//==========================================================================
+bool LinuxSocket::TCPServerSend(const void *buffer, const int &bufferSize)
+{
+	int bytesSent, s;
+	bool success(true), calledSend(false);
+
+	for (s = 0; s <= maxSock; s++)
+	{
+		if (!FD_ISSET(s, &clients) || s == sock)
+			continue;
+
+		bytesSent = send(s, buffer, bufferSize, 0);
+		calledSend = true;
+
+		if (bytesSent == SOCKET_ERROR)
+		{
+			outStream << "  Error sending TCP message on socket " << s << ": " << GetLastError() << endl;
+			success = false;
+		}
+		else if (bytesSent != bufferSize)
+		{
+			outStream << "  Wrong number of bytes sent (TCP) on socket "<< s << endl;
+			success = false;
+		}
+	}
+
+	return success && calledSend;
 }
 
 //==========================================================================
@@ -615,7 +697,7 @@ bool LinuxSocket::TCPSend(void *buffer, const int &bufferSize)
 //		vector<string> containing local network interface addresses
 //
 //==========================================================================
-vector<string> LinuxSocket::GetLocalIPAddress(void) const
+vector<string> LinuxSocket::GetLocalIPAddress(void)
 {
 	vector<string> ips;
 	char host[80];
@@ -623,7 +705,7 @@ vector<string> LinuxSocket::GetLocalIPAddress(void) const
 	// Get the host name
 	if (gethostname(host, sizeof(host)) == SOCKET_ERROR)
 	{
-		outStream << "  Error getting host name: " << GetLastError() << endl;
+		//outStream << "  Error getting host name: " << GetLastError() << endl;
 		return ips;
 	}
 
@@ -631,7 +713,7 @@ vector<string> LinuxSocket::GetLocalIPAddress(void) const
 
 	if (hostEntity == 0)
 	{
-		outStream << "  Bad host lookup!" << endl;
+		//outStream << "  Bad host lookup!" << endl;
 		return ips;
 	}
 
@@ -664,7 +746,7 @@ vector<string> LinuxSocket::GetLocalIPAddress(void) const
 //		std::string containing the best local IP
 //
 //==========================================================================
-std::string LinuxSocket::GetBestLocalIPAddress(const string &destination) const
+std::string LinuxSocket::GetBestLocalIPAddress(const string &destination)
 {
 	unsigned int i;
 	vector<string> ips(GetLocalIPAddress());
@@ -731,7 +813,9 @@ std::string LinuxSocket::GetLastError(void)
 #ifdef WIN32
 	// TODO:  Implement
 #else
-	return strerror(errno);
+	stringstream errorString;
+	errorString << "(" << errno << ") " << strerror(errno);
+	return errorString.str();
 #endif
 }
 

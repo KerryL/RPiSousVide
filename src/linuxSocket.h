@@ -12,7 +12,10 @@
 #include <iostream>
 
 // pThread headers
-#include <ptrhead.h>
+#include <pthread.h>
+
+// *nix forward declarations
+struct sockaddr_in;
 
 class LinuxSocket
 {
@@ -35,13 +38,13 @@ public:
 	int Receive(void);
 
 	// NOTE:  If type == SocketTCPServer, calling method MUST aquire and release mutex when using GetLastMessage
-	const unsigned char *GetLastMessage() const { clientMessageSize = 0; return rcvBuffer; };
+	const unsigned char *GetLastMessage() { clientMessageSize = 0; return rcvBuffer; };
 
 	bool GetLock(void);
 	bool ReleaseLock(void);
 
-	bool UDPSend(const char *addr, const short &port, void *buffer, const int &bufferSize);// UDP version
-	bool TCPSend(void *buffer, const int &bufferSize);// TCP version
+	bool UDPSend(const char *addr, const short &port, const void *buffer, const int &bufferSize);// UDP version
+	bool TCPSend(const void *buffer, const int &bufferSize);// TCP version
 
 	bool IsTCP(void) const { return type == SocketTCPServer || type == SocketTCPClient; };
 	bool IsServer(void) const { return type == SocketTCPServer || type == SocketUDPServer; };
@@ -51,6 +54,7 @@ public:
 private:
 	static const unsigned int maxMessageSize;
 	static const unsigned int maxConnections;
+	static const unsigned int selectTimeout;// [sec]
 
 	const SocketType type;
 	std::ostream &outStream;
@@ -63,16 +67,18 @@ private:
 	bool Connect(const sockaddr_in &address);
 	bool EnableAddressReusue(void);
 
-	static std::vector<std::string> GetLocalIPAddress(void) const;
-	static std::string GetBestLocalIPAddress(const std::string &destination) const;
+	static std::vector<std::string> GetLocalIPAddress(void);
+	static std::string GetBestLocalIPAddress(const std::string &destination);
 	static sockaddr_in AssembleAddress(const unsigned short &port, const std::string &target = "");
 	static std::string GetTypeString(SocketType type);
 	static std::string GetLastError(void);
 
 	int DoReceive(int sock, struct sockaddr_in *senderAddr = NULL);
+	bool TCPServerSend(const void *buffer, const int &bufferSize);
 
 	// TCP server methods and members
-	void ListenThreadEntry(void*);
+	friend void *LaunchThread(void *pThisSocket);
+	void ListenThreadEntry(void);
 	void HandleClient(int newSock);
 
 	volatile bool continueListening;
