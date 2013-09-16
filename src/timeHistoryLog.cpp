@@ -50,7 +50,7 @@ std::string TimeHistoryLog::TimeHistoryStreamBuffer::GetTime(void)
 	unsigned long seconds, useconds;
 	double elapsed;
 	struct timeval now;
-	gettimeofday(&end, NULL);
+	gettimeofday(&now, NULL);
 
 	seconds  = now.tv_sec  - start.tv_sec;
 	useconds = now.tv_usec - start.tv_usec;

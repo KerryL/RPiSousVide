@@ -4,6 +4,7 @@
 // Desc:  Configuration options (to be read from file) for sous vide service.
 
 // Standard C++ headers
+#include <fstream>
 #include <algorithm>
 
 // Local headers
@@ -41,7 +42,6 @@ const std::string SousVideConfig::ConfigFields::InterlockTemperatureToleranceKey
 
 const std::string SousVideConfig::ConfigFields::SystemIdleFrequencyKey				= "idleFrequency";
 const std::string SousVideConfig::ConfigFields::SystemActiveFrequencyKey			= "activeFrequency";
-const std::string SousVideConfig::ConfigFields::SystemPWMFrequencyKey				= "pwmFrequency";
 const std::string SousVideConfig::ConfigFields::SystemStatisticsTimeKey				= "statisticsTime";
 const std::string SousVideConfig::ConfigFields::SystemMaxHeatingRateKey				= "maxHeatingRate";
 
@@ -152,7 +152,6 @@ void SousVideConfig::AssignDefaults(void)
 
 	system.idleFrequency = 1.0;// [Hz]
 	system.activeFrequency = 10.0;// [Hz]
-	system.heaterPWMFrequency = 10.0;// [Hz]
 	system.statisticsTime = 10.0;// [sec]
 	system.maxHeatingRate = -1.0;// [deg F/sec] invalid -> must be specified by user
 }
@@ -377,17 +376,6 @@ bool SousVideConfig::SystemConfigIsOK(void) const
 		ok = false;
 	}
 
-	if (system.heaterPWMFrequency <= 0.0)
-	{
-		outStream << "System:  " << ConfigFields::SystemPWMFrequencyKey << " must be strictly positive" << std::endl;
-		ok = false;
-	}
-	else if (system.heaterPWMFrequency > 19200000.0)
-	{
-		outStream << "System:  " << ConfigFields::SystemPWMFrequencyKey << " must be less than 19.2 MHz (specified in Hz)" << std::endl;
-		ok = false;
-	}
-
 	if (system.statisticsTime < 0.0)
 	{
 		outStream << "System:  " << ConfigFields::SystemStatisticsTimeKey << " must be strictly positive" << std::endl;
@@ -490,8 +478,6 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		system.idleFrequency = atof(data.c_str());
 	else if (field.compare(ConfigFields::SystemActiveFrequencyKey) == 0)
 		system.activeFrequency = atof(data.c_str());
-	else if (field.compare(ConfigFields::SystemPWMFrequencyKey) == 0)
-		system.heaterPWMFrequency = atof(data.c_str());
 	else if (field.compare(ConfigFields::SystemStatisticsTimeKey) == 0)
 		system.statisticsTime = atof(data.c_str());
 	else if (field.compare(ConfigFields::SystemMaxHeatingRateKey) == 0)

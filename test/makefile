@@ -5,7 +5,9 @@
 TESTDIRS = \
 	gpio \
 	sockets/server \
-	sockets/client
+	sockets/client \
+	logger \
+	config
 
 .PHONY: all clean
 

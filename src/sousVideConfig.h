@@ -9,7 +9,6 @@
 // Standard C++ headers
 #include <string>
 #include <iostream>
-#include <fstream>
 
 struct NetworkConfiguration
 {
@@ -45,7 +44,6 @@ struct SystemConfiguration
 
 	double idleFrequency;// [Hz]
 	double activeFrequency;// [Hz]
-	double heaterPWMFrequency;// [Hz]
 	double statisticsTime;// [sec]
 
 	double maxHeatingRate;// [deg F/sec]
@@ -76,7 +74,7 @@ private:
 	bool InterlockConfigIsOK(void) const;
 	bool SystemConfigIsOK(void) const;
 
-	static const struct ConfigFields
+	struct ConfigFields
 	{
 		static const std::string CommentCharacter;
 
@@ -94,7 +92,6 @@ private:
 
 		static const std::string SystemIdleFrequencyKey;
 		static const std::string SystemActiveFrequencyKey;
-		static const std::string SystemPWMFrequencyKey;
 		static const std::string SystemStatisticsTimeKey;
 		static const std::string SystemMaxHeatingRateKey;
 	};
