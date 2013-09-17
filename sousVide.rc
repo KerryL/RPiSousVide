@@ -19,11 +19,13 @@
 # Controller form is kp * (1 + 1 / (ti * s))
 kp = 1# [%/deg F]
 #ti = 0# [sec] (0 == OFF)
+#plateauTolerance = 1# [deg F]
 
 # Interlock configuration
 #maxSaturationTime = 10# [sec]
 #maxTemperature = 200# [deg F]
 #temperatureTolerance = 2# [deg F]
+#minErrorTime = 5# [sec]
 
 # System configuration
 #idleFrequency = 1# [Hz]

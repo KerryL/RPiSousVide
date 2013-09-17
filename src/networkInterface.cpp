@@ -3,28 +3,15 @@
 // Auth:  K. Loux
 // Desc:  Interface for Ethernet communication with front end.
 
+// Standard C++ headers
+#include <string.h>
+
 // Local headers
 #include "networkInterface.h"
 #include "networkMessageDefs.h"
 #include "linuxSocket.h"
-
-//==========================================================================
-// Class:			NetworkInterface
-// Function:		Constant definitions
-//
-// Description:		Constant definitions for the NetworkInterface class.
-//
-// Input Arguments:
-//		None
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		None
-//
-//==========================================================================
-
+#include "mutexLocker.h"
+#include "combinedLogger.h"
 
 //==========================================================================
 // Class:			NetworkInterface
@@ -44,7 +31,7 @@
 //==========================================================================
 NetworkInterface::NetworkInterface(NetworkConfiguration configuration)
 {
-	socket = new LinuxSocket(LinuxSocket::SocketTCPServer, CombinedLogger::GetLogger());
+	socket = new LinuxSocket(LinuxSocket::SocketTCPServer, /*CombinedLogger::GetLogger()*/std::cout);
 	socket->Create(configuration.port);
 	socket->SetBlocking(false);
 }
@@ -70,32 +57,81 @@ NetworkInterface::~NetworkInterface()
 	delete socket;
 }
 
+//==========================================================================
+// Class:			NetworkInterface
+// Function:		ReceiveData
+//
+// Description:		Gets data from socket, if available.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		message	= FrontToBackMessage&
+//
+// Return Value:
+//		bool, true for data available and successfully read, false otherwise
+//
+//==========================================================================
 bool NetworkInterface::ReceiveData(FrontToBackMessage &message)
 {
-	// TODO:  It would be nice to have some type of mutex locker object so we don't need to explicitly release on all control paths
-	socket->GetLock();
+	MutexLocker locker(socket->GetMutex());
+
 	int bytesReceived = socket->Receive();
-	if (bytesReceived < sizeof(message))
-	{
-		socket->ReleaseLock();
+	if (bytesReceived < (int)sizeof(message))
 		return false;
-	}
 	else if (bytesReceived == sizeof(message))
 	{
 		memcpy(&message, socket->GetLastMessage(), sizeof(message));
-		socket->ReleaseLock();
 		return true;
 	}
 	else
 	{
 		// TODO:  Do some extra work in case multiple messages arrive at the same time?
+		CombinedLogger::GetLogger() << "Message size mismatch in NetworkInterface::ReceiveData" << std::endl;
 	}
 
-	socket->ReleaseLock();
 	return false;
 }
 
-bool NetworkInterface::SendData(BackToFrontMessage &message)
+//==========================================================================
+// Class:			NetworkInterface
+// Function:		SendData
+//
+// Description:		Sends data to all connected clients.
+//
+// Input Arguments:
+//		message	= const BackToFrontMessage&
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for success, false otherwise
+//
+//==========================================================================
+bool NetworkInterface::SendData(const BackToFrontMessage &message)
 {
 	return socket->TCPSend(&message, sizeof(message));
+}
+
+//==========================================================================
+// Class:			NetworkInterface
+// Function:		ClientConnected
+//
+// Description:		Checks to see if we have any active clients.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for at least one client connection, false otherwise
+//
+//==========================================================================
+bool NetworkInterface::ClientConnected(void) const
+{
+	return socket->GetClientCount() > 0;
 }

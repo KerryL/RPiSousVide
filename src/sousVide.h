@@ -10,6 +10,7 @@
 #include <string>
 #include <ctime>
 #include <fstream>
+#include <vector>
 
 // Local headers
 #include "sousVideConfig.h"
@@ -19,11 +20,13 @@ class NetworkInterface;
 class TemperatureController;
 class GPIO;
 class TimeHistoryLog;
+struct FrontToBackMessage;
+struct BackToFrontMessage;
 
 class SousVide
 {
 public:
-	SousVide();
+	SousVide(bool autoTune = false);
 	~SousVide();
 
 	void Run(void);
@@ -37,9 +40,20 @@ public:
 		StateSoaking,
 		StateCooling,
 		StateError,
+		//StateAutoTune,
 
 		StateCount
 	};
+
+	enum Command
+	{
+		CmdStart,
+		CmdStop,
+		CmdReset,
+		CmdNone
+	};
+
+	static void PrintUsageInfo(std::string name);
 
 private:
 	static const std::string configFileName;
@@ -58,6 +72,9 @@ private:
 	clock_t lastUpdate;
 
 	NetworkInterface *ni;
+	void ProcessMessage(const FrontToBackMessage &recievedMessage);
+	BackToFrontMessage AssembleMessage(void) const;
+
 	TemperatureController *controller;
 	GPIO *pumpRelay;
 
@@ -81,6 +98,8 @@ private:
 	bool InterlocksOK(void);
 	void EnterActiveState(void);
 	void ExitActiveState(void);
+
+	Command command;
 };
 
 #endif// SOUS_VIDE_H_

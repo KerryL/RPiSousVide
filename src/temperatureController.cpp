@@ -37,7 +37,7 @@ TemperatureController::TemperatureController(double timeStep,
 	: PIController(timeStep, configuration.kp, configuration.ti), sensor(sensor), pwmOut(pwmOut)
 {
 	SetOutputClamp(0.0, 1.0);
-	OutputEnabled(false);
+	SetOutputEnable(false);
 }
 
 //==========================================================================
@@ -118,7 +118,7 @@ void TemperatureController::Update(void)
 
 //==========================================================================
 // Class:			TemperatureController
-// Function:		OutputEnable
+// Function:		SetOutputEnable
 //
 // Description:		Enable/disable the PWM output.
 //
@@ -132,7 +132,7 @@ void TemperatureController::Update(void)
 //		None
 //
 //==========================================================================
-void TemperatureController::OutputEnable(bool enabled)
+void TemperatureController::SetOutputEnable(bool enabled)
 {
 	this->enabled = enabled;
 

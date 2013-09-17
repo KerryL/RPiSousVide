@@ -11,6 +11,9 @@
 #include <vector>
 #include <iostream>
 
+// *nix headers
+#include <sys/select.h>
+
 // pThread headers
 #include <pthread.h>
 
@@ -42,12 +45,15 @@ public:
 
 	bool GetLock(void);
 	bool ReleaseLock(void);
+	pthread_mutex_t& GetMutex(void) { return bufferMutex; };
 
 	bool UDPSend(const char *addr, const short &port, const void *buffer, const int &bufferSize);// UDP version
 	bool TCPSend(const void *buffer, const int &bufferSize);// TCP version
 
 	bool IsTCP(void) const { return type == SocketTCPServer || type == SocketTCPClient; };
 	bool IsServer(void) const { return type == SocketTCPServer || type == SocketUDPServer; };
+
+	unsigned int GetClientCount(void) const;
 
 	static const int SOCKET_ERROR = -1;
 

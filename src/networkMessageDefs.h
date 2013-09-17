@@ -10,16 +10,9 @@
 // Local headers
 #include "sousVide.h"
 
-enum Command
-{
-	CmdStart,
-	CmdStop,
-	CmdReset
-};
-
 struct FrontToBackMessage
 {
-	Command command;
+	SousVide::Command command;
 
 	double plateauTemperature;// [deg F]
 	double soakTime;// [sec]

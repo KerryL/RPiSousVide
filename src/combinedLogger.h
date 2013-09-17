@@ -12,9 +12,7 @@
 #include <string>
 #include <fstream>
 
-// Forward declarations
-//class Logger;
-
+// Local headers
 #include "logger.h"
 
 class CombinedLogger

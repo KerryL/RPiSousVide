@@ -27,6 +27,8 @@ struct ControllerConfiguration
 {
 	double kp;// [%/deg F]
 	double ti;// [sec]
+
+	double plateauTolerance;// [deg F]
 };
 
 struct InterlockConfiguration
@@ -34,6 +36,8 @@ struct InterlockConfiguration
 	double maxSaturationTime;// [sec]
 	double maxTemperature;// [deg F]
 	double temperatureTolerance;// [deg F]
+
+	double minErrorTime;// [sec]
 
 	// TODO:  Bypasses?
 };
@@ -85,10 +89,12 @@ private:
 
 		static const std::string ControllerKpKey;
 		static const std::string ControllerTiKey;
+		static const std::string ControllerPlateauToleranceKey;
 
 		static const std::string InterlockMaxSaturationTimeKey;
 		static const std::string InterlockMaxTemperatureKey;
 		static const std::string InterlockTemperatureToleranceKey;
+		static const std::string InterlockMinErrorTimeKey;
 
 		static const std::string SystemIdleFrequencyKey;
 		static const std::string SystemActiveFrequencyKey;

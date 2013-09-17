@@ -6,14 +6,11 @@
 #ifndef NETWORK_INTERFACE_H_
 #define NETWORK_INTERFACE_H_
 
-// Standard C++ headers
-#include <string>
-
 // Local forward declarations
 struct NetworkConfiguration;
 struct FrontToBackMessage;
 struct BackToFrontMessage;
-class Socket;
+class LinuxSocket;
 
 class NetworkInterface
 {
@@ -22,15 +19,12 @@ public:
 	~NetworkInterface();
 
 	bool ReceiveData(FrontToBackMessage &message);
-	bool SendData(BackToFrontMessage &message);
+	bool SendData(const BackToFrontMessage &message);
+
+	bool ClientConnected(void) const;
 
 private:
-	const unsigned int port;
-
-	/*unsigned char overflowBuffer[overflowMaxSize];
-	unsigned long overflowBufferSize;*/
-
-	Socket *socket;
+	LinuxSocket *socket;
 };
 
 #endif// NETWORK_MESSAGE_DEFS_H_

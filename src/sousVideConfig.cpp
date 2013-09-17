@@ -35,10 +35,12 @@ const std::string SousVideConfig::ConfigFields::IOHeaterPinKey						= "heaterPin
 
 const std::string SousVideConfig::ConfigFields::ControllerKpKey						= "kp";
 const std::string SousVideConfig::ConfigFields::ControllerTiKey						= "ti";
+const std::string SousVideConfig::ConfigFields::ControllerPlateauToleranceKey		= "plateauTolerance";
 
 const std::string SousVideConfig::ConfigFields::InterlockMaxSaturationTimeKey		= "maxSaturationTime";
 const std::string SousVideConfig::ConfigFields::InterlockMaxTemperatureKey			= "maxTemperature";
 const std::string SousVideConfig::ConfigFields::InterlockTemperatureToleranceKey	= "temperatureTolerance";
+const std::string SousVideConfig::ConfigFields::InterlockMinErrorTimeKey			= "minErrorTime";
 
 const std::string SousVideConfig::ConfigFields::SystemIdleFrequencyKey				= "idleFrequency";
 const std::string SousVideConfig::ConfigFields::SystemActiveFrequencyKey			= "activeFrequency";
@@ -102,7 +104,7 @@ bool SousVideConfig::ReadConfiguration(std::string fileName)
 			continue;
 
 		if (ConfigFields::CommentCharacter.compare(line.substr(0,1)) != 0
-			&& line.find(" ") != std::string::npos)// TODO:  This might not be right...
+			&& line.find(" ") != std::string::npos)
 		{
 			inLineComment = line.find(ConfigFields::CommentCharacter);
 			if (inLineComment != std::string::npos)
@@ -145,10 +147,12 @@ void SousVideConfig::AssignDefaults(void)
 
 	controller.kp = -1.0;// invalid -> must be specified by user
 	controller.ti = 0.0;
+	controller.plateauTolerance = 1.0;// [deg F]
 
 	system.interlock.maxSaturationTime = 10.0;// [sec]
 	system.interlock.maxTemperature = 200.0;// [deg F]
 	system.interlock.temperatureTolerance = 2.0;// [deg F]
+	system.interlock.minErrorTime = 5.0;// [sec]
 
 	system.idleFrequency = 1.0;// [Hz]
 	system.activeFrequency = 10.0;// [Hz]
@@ -201,8 +205,16 @@ bool SousVideConfig::ConfigIsOK(void) const
 //==========================================================================
 bool SousVideConfig::NetworkConfigIsOK(void) const
 {
-	//network.port;// If it fits in an unsigned short, it's valid
-	return true;
+	bool ok(true);
+
+	// Don't allow ports that will require root access
+	if (network.port < 1024)
+	{
+		outStream << "Network:  " << ConfigFields::NetworkPortKey << " must be 1024 or greater" << std::endl;
+		ok = false;
+	}
+
+	return ok;
 }
 
 //==========================================================================
@@ -290,6 +302,12 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 		ok = false;
 	}
 
+	if (controller.plateauTolerance <= 0.0)
+	{
+		outStream << "Controller:  " << ConfigFields::ControllerPlateauToleranceKey << " must be strictly positive" << std::endl;
+		ok = false;
+	}
+
 	return ok;
 }
 
@@ -338,6 +356,12 @@ bool SousVideConfig::InterlockConfigIsOK(void) const
 	else if (system.interlock.temperatureTolerance > 30.0)
 	{
 		outStream << "Interlock:  " << ConfigFields::InterlockTemperatureToleranceKey << " must be less than 30 deg F" << std::endl;
+		ok = false;
+	}
+
+	if (system.interlock.minErrorTime < 0.0)
+	{
+		outStream << "Interlock:  " << ConfigFields::InterlockMinErrorTimeKey << " must be positive" << std::endl;
 		ok = false;
 	}
 
@@ -468,12 +492,16 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		controller.kp = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerTiKey) == 0)
 		controller.ti = atof(data.c_str());
+	else if (field.compare(ConfigFields::ControllerPlateauToleranceKey) == 0)
+		controller.plateauTolerance = atof(data.c_str());
 	else if (field.compare(ConfigFields::InterlockMaxSaturationTimeKey) == 0)
 		system.interlock.maxSaturationTime = atof(data.c_str());
 	else if (field.compare(ConfigFields::InterlockMaxTemperatureKey) == 0)
 		system.interlock.maxTemperature = atof(data.c_str());
 	else if (field.compare(ConfigFields::InterlockTemperatureToleranceKey) == 0)
 		system.interlock.temperatureTolerance = atof(data.c_str());
+	else if (field.compare(ConfigFields::InterlockMinErrorTimeKey) == 0)
+		system.interlock.minErrorTime = atof(data.c_str());
 	else if (field.compare(ConfigFields::SystemIdleFrequencyKey) == 0)
 		system.idleFrequency = atof(data.c_str());
 	else if (field.compare(ConfigFields::SystemActiveFrequencyKey) == 0)

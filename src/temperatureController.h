@@ -23,7 +23,7 @@ public:
 
 	void Reset(void);
 	void Update(void);
-	void OutputEnable(bool enabled = true);
+	void SetOutputEnable(bool enabled = true);
 
 	void SetRateLimit(double rate);
 	void SetPlateauTemperature(double temperature);

@@ -860,3 +860,34 @@ bool LinuxSocket::ReleaseLock(void)
 {
 	return pthread_mutex_unlock(&bufferMutex) == 0;
 }
+
+//==========================================================================
+// Class:			LinuxSocket
+// Function:		GetClientCount
+//
+// Description:		Returns the number of connected TCP clients.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		unsigned int
+//
+//==========================================================================
+unsigned int LinuxSocket::GetClientCount(void) const
+{
+	assert(type == SocketTCPServer);
+
+	int s, count(0);
+	for (s = 0; s <= maxSock; s++)
+	{
+		if (!FD_ISSET(s, &clients) || s == sock)
+			continue;
+		count++;
+	}
+
+	return count;
+}

@@ -22,7 +22,7 @@ public:
 
 	// TODO:  Options for: filtering?  Equation form?
 
-private:
+protected:
 	const double timeStep;// [sec]
 	double kp, ti;
 	double errorIntegral;
