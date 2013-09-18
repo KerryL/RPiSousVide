@@ -37,6 +37,7 @@ const std::string SousVideConfig::ConfigFields::IOSensorIDKey						= "sensorID";
 
 const std::string SousVideConfig::ConfigFields::ControllerKpKey						= "kp";
 const std::string SousVideConfig::ConfigFields::ControllerTiKey						= "ti";
+const std::string SousVideConfig::ConfigFields::ControllerFfKey						= "ff";
 const std::string SousVideConfig::ConfigFields::ControllerPlateauToleranceKey		= "plateauTolerance";
 
 const std::string SousVideConfig::ConfigFields::InterlockMaxSaturationTimeKey		= "maxSaturationTime";
@@ -150,6 +151,7 @@ void SousVideConfig::AssignDefaults(void)
 
 	controller.kp = -1.0;// invalid -> must be specified by user
 	controller.ti = 0.0;
+	controller.ff = 0.0;
 	controller.plateauTolerance = 1.0;// [deg F]
 
 	system.interlock.maxSaturationTime = 10.0;// [sec]
@@ -308,6 +310,12 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 	if (controller.ti < 0.0)
 	{
 		outStream << "Controller:  " << ConfigFields::ControllerTiKey << " must be positive" << std::endl;
+		ok = false;
+	}
+
+	if (controller.ff < 0.0)
+	{
+		outStream << "Controller:  " << ConfigFields::ControllerFfKey << " must be positive" << std::endl;
 		ok = false;
 	}
 
@@ -503,6 +511,8 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		controller.kp = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerTiKey) == 0)
 		controller.ti = atof(data.c_str());
+	else if (field.compare(ConfigFields::ControllerFfKey) == 0)
+		controller.ff = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerPlateauToleranceKey) == 0)
 		controller.plateauTolerance = atof(data.c_str());
 	else if (field.compare(ConfigFields::InterlockMaxSaturationTimeKey) == 0)

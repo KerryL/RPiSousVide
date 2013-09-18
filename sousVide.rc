@@ -20,6 +20,7 @@ sensorID = 28-000000000000
 # Controller form is kp * (1 + 1 / (ti * s))
 kp = 1# [%/deg F]
 #ti = 0# [sec] (0 == OFF)
+#ff = 1# [%-sec/deg F]
 #plateauTolerance = 1# [deg F]
 
 # Interlock configuration

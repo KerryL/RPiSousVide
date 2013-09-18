@@ -28,6 +28,7 @@ struct ControllerConfiguration
 {
 	double kp;// [%/deg F]
 	double ti;// [sec]
+	double ff;// [%-sec/deg F]
 
 	double plateauTolerance;// [deg F]
 };
@@ -89,6 +90,7 @@ private:
 
 		static const std::string ControllerKpKey;
 		static const std::string ControllerTiKey;
+		static const std::string ControllerFfKey;
 		static const std::string ControllerPlateauToleranceKey;
 
 		static const std::string InterlockMaxSaturationTimeKey;

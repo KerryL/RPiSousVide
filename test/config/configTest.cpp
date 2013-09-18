@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
 	cout << "Controller Configuration" << endl;
 	cout << "  Proportional Gain = " << config.controller.kp << " %/deg F" << endl;
 	cout << "  Integral Time Constant = " << config.controller.ti << " sec" << endl;
+	cout << "  Feed Forward Gain = " << config.controller.ff << " %-sec/deg F" << endl;
 	cout << "  Plateau Tolerance = " << config.controller.plateauTolerance << " deg F" << endl;
 
 	cout << endl;
