@@ -1,6 +1,7 @@
 // File:  gpio.cpp
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  C++ wrapper for Wiring Pi general-purpose I/O function calls.
 
 // Standard C++ headers
@@ -11,6 +12,24 @@
 
 // Local headers
 #include "gpio.h"
+
+//==========================================================================
+// Class:			GPIO
+// Function:		None
+//
+// Description:		Static member initializaiton.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+bool GPIO::initialized = false;
 
 //==========================================================================
 // Class:			GPIO
@@ -32,6 +51,12 @@
 //==========================================================================
 GPIO::GPIO(int pin, DataDirection direction) : pin(pin)
 {
+	if (!initialized)
+	{
+		wiringPiSetup();
+		initialized = true;
+	}
+
 	assert(pin >= 0 && pin <= 20);
 	SetDataDirection(direction);
 }

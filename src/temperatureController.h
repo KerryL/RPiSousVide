@@ -1,6 +1,7 @@
 // File:  temperatureController.h
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Temperature controller object.  Closes a loop around a temperature sensor.
 
 #ifndef TEMPERATURE_CONTROLLER_H_
@@ -40,6 +41,7 @@ private:
 	PWMOutput* const pwmOut;
 
 	bool enabled;
+	bool sensorOK;
 
 	double rate;// [deg F/sec]
 	double plateauTemperature;// [deg F]

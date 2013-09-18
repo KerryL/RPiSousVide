@@ -1,6 +1,7 @@
 // File:  networkMessageDefs.h
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Network message definitions for communication between front end (web
 //        interface) and back end (this).
 

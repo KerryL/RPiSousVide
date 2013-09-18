@@ -1,6 +1,7 @@
 // File:  networkInterface.h
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Interface for Ethernet communication with front end.
 
 #ifndef NETWORK_INTERFACE_H_

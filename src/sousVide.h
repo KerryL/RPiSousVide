@@ -1,6 +1,7 @@
 // File:  sousVide.h
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Main object for sous vide machine.
 
 #ifndef SOUS_VIDE_H_
@@ -74,6 +75,7 @@ private:
 	NetworkInterface *ni;
 	void ProcessMessage(const FrontToBackMessage &recievedMessage);
 	BackToFrontMessage AssembleMessage(void) const;
+	bool sendClientMessage;
 
 	TemperatureController *controller;
 	GPIO *pumpRelay;
@@ -96,6 +98,9 @@ private:
 	std::string GetStateName(void);
 
 	bool InterlocksOK(void);
+	time_t saturationStartTime;
+	bool lastOutputSaturated;
+
 	void EnterActiveState(void);
 	void ExitActiveState(void);
 

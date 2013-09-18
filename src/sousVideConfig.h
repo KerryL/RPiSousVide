@@ -1,6 +1,7 @@
 // File:  sousVideConfig.h
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Configuration options (to be read from file) for sous vide service.
 
 #ifndef SOUS_VIDE_CONFIG_H_
@@ -20,7 +21,7 @@ struct IOConfiguration
 	int pumpRelayPin;
 	int heaterRelayPin;
 
-	// TODO:  Need to identify temp sensor communication (via serial number if SPI?)
+	std::string sensorID;
 };
 
 struct ControllerConfiguration
@@ -38,8 +39,6 @@ struct InterlockConfiguration
 	double temperatureTolerance;// [deg F]
 
 	double minErrorTime;// [sec]
-
-	// TODO:  Bypasses?
 };
 
 struct SystemConfiguration
@@ -86,6 +85,7 @@ private:
 
 		static const std::string IOPumpPinKey;
 		static const std::string IOHeaterPinKey;
+		static const std::string IOSensorIDKey;
 
 		static const std::string ControllerKpKey;
 		static const std::string ControllerTiKey;

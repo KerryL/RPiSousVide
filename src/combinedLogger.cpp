@@ -1,6 +1,7 @@
 // File:  combinedLogger.h
 // Date:  9/3/2013
 // Auth:  K. Loux
+// Copy:  (c) Kerry Loux 2013
 // Desc:  Logging object.  Handles two logs, one for application status and
 //        one for easy temperature vs. time plotting.  Note that this class
 //		  is NOT thread-safe!
@@ -11,7 +12,6 @@
 
 // Local headers
 #include "combinedLogger.h"
-#include "logger.h"
 
 //==========================================================================
 // Class:			CombinedLogger
@@ -35,29 +35,9 @@ std::ofstream CombinedLogger::file(logFileName.c_str(), std::ios::out);
 
 //==========================================================================
 // Class:			CombinedLogger
-// Function:		CombinedLogger
+// Function:		~CombinedLogger
 //
-// Description:		Constructor for CombinedLogger class.
-//
-// Input Arguments:
-//		None
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		None
-//
-//==========================================================================
-CombinedLogger::CombinedLogger()
-{
-}
-
-//==========================================================================
-// Class:			CombinedLogger
-// Function:		CombinedLogger
-//
-// Description:		Constructor for CombinedLogger class.
+// Description:		Destructor for CombinedLogger class.
 //
 // Input Arguments:
 //		None
@@ -85,8 +65,7 @@ CombinedLogger::~CombinedLogger()
 // Description:		Returns a pointer to an instance of the application's log object.
 //
 // Input Arguments:
-//		appLogFile	= std::string, specifying path for the overwritten-on-each-instance
-//					  application log file
+//		None
 //
 // Output Arguments:
 //		None
@@ -150,29 +129,3 @@ void CombinedLogger::Add(Logger* log)
 {
 	logs.push_back(log);
 }
-
-//==========================================================================
-// Class:			(friend of) CombinedLogger
-// Function:		operator<<
-//
-// Description:		Adds the argument to the log buffers.  This one is included
-//					becuase the template method doesn't properly handle std::endl.
-//
-// Input Arguments:
-//		log	= CombinedLogger&
-//		pf	= std::ostream&* (std::ostream&) (<-- function call)
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		CombinedLogger& (returns log argument)
-//
-//==========================================================================
-CombinedLogger& operator<<(CombinedLogger& log, std::ostream& (*pf) (std::ostream&))
-{
-	unsigned int i;
-	for (i = 0; i < log.logs.size(); i++)
-		*log.logs[i] << pf;
-	return log;
-};

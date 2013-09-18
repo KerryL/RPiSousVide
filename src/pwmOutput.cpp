@@ -1,6 +1,7 @@
 // File:  pwmOutput.cpp
 // Date:  9/1/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  C++ wrapper for Wiring Pi PWM methods.  Currently supports only hardware PWM.
 
 // Standard C++ headers

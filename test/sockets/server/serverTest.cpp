@@ -1,6 +1,7 @@
 // File:  serverTest.cpp
-// Date:  
+// Date:  9/10/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Server socket test application.
 
 // Comment out the next line for UDP sockets
@@ -45,37 +46,45 @@ void DoStuff(void)
 	string buffer;
 	while (true)
 	{
-		int rcvSize;
-		while (rcvSize = socket.Receive(), rcvSize == 0) {}
-		cout << "Received " << rcvSize << " bytes" << endl;
-
-		if (socket.IsTCP())
+		// Receive messages until two clients are connected, then send to both clients
+#ifdef TCP_TEST
+		do
 		{
-			if (socket.GetLock())
-				cout << "Aquired mutex lock" << endl;
-			else
-			{
-				cout << "Failed to aquire mutex lock" << endl;
-				break;
-			}
-		}
+#endif
+			int rcvSize;
+			while (rcvSize = socket.Receive(), rcvSize == 0) {}
+			cout << "Received " << rcvSize << " bytes" << endl;
 
-		const int bufSize(15);
-		char cBuffer[bufSize];
-		memcpy(cBuffer, socket.GetLastMessage(), bufSize);
-		buffer.assign(cBuffer);
-		cout << "Received message '" << buffer << "'" << endl;
-		
-		if (socket.IsTCP())
-		{		
-			if (socket.ReleaseLock())
-					cout << "Released mutex lock" << endl;
-			else
+			if (socket.IsTCP())
 			{
-				cout << "Failed to release mutex lock" << endl;
-				break;
+				if (socket.GetLock())
+					cout << "Aquired mutex lock" << endl;
+				else
+				{
+					cout << "Failed to aquire mutex lock" << endl;
+					break;
+				}
 			}
-		}
+
+			const int bufSize(15);
+			char cBuffer[bufSize];
+			memcpy(cBuffer, socket.GetLastMessage(), bufSize);
+			buffer.assign(cBuffer);
+			cout << "Received message '" << buffer << "'" << endl;
+		
+			if (socket.IsTCP())
+			{		
+				if (socket.ReleaseLock())
+						cout << "Released mutex lock" << endl;
+				else
+				{
+					cout << "Failed to release mutex lock" << endl;
+					break;
+				}
+			}
+#ifdef TCP_TEST
+		} while (socket.GetClientCount() < 2);
+#endif
 
 		buffer = "from server";
 		cout << "Sending '" << buffer << "'" << endl;

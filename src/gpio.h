@@ -1,6 +1,7 @@
 // File:  gpio.h
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  C++ wrapper for Wiring Pi general-purpose I/O function calls.
 
 #ifndef GPIO_H_
@@ -36,6 +37,7 @@ protected:
 
 private:
 	DataDirection direction;
+	static bool initialized;
 };
 
 

@@ -1,6 +1,7 @@
 // File:  combinedLogger.h
 // Date:  9/3/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Logging object that permits writing to multiple logs simultaneously.
 
 #ifndef COMBINED_LOGGER_H_
@@ -15,7 +16,7 @@
 // Local headers
 #include "logger.h"
 
-class CombinedLogger
+class CombinedLogger : public std::ostream
 {
 public:
 	static CombinedLogger& GetLogger(void);
@@ -23,13 +24,29 @@ public:
 
 	void Add(Logger* log);
 
-	friend CombinedLogger& operator<<(CombinedLogger& log, std::ostream& (*pf) (std::ostream&));
-
-	template<typename T>
-	friend CombinedLogger& operator<<(CombinedLogger& log, T const& value);
-
 private:
-	CombinedLogger();
+	class CombinedStreamBuffer : public std::stringbuf
+	{
+	public:
+		CombinedStreamBuffer(CombinedLogger &log) : log(log) {}
+
+		virtual int sync(void)
+		{
+			unsigned int i;
+			for (i = 0; i < log.logs.size(); i++)
+			{
+				*log.logs[i] << str();
+				log.logs[i]->flush();
+			}
+			str("");
+			return 0;
+		};
+
+	private:
+		CombinedLogger &log;
+	} buffer;
+
+	CombinedLogger() : std::ostream(&buffer), buffer(*this) {};
 	~CombinedLogger();
 
 	static CombinedLogger *logger;
@@ -37,32 +54,6 @@ private:
 
 	static std::ofstream file;
 	std::vector<Logger*> logs;
-};
-
-//==========================================================================
-// Class:			(friend of) CombinedLogger
-// Function:		operator<<
-//
-// Description:		Adds the argument to the log buffers.
-//
-// Input Arguments:
-//		log		= CombinedLogger&
-//		value	= T const& (template type)
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		CombinedLogger& (returns log argument)
-//
-//==========================================================================
-template<typename T>
-CombinedLogger& operator<<(CombinedLogger& log, T const& value)
-{
-	unsigned int i;
-	for (i = 0; i < log.logs.size(); i++)
-		*log.logs[i] << value;
-	return log;
 };
 
 #endif// COMBINED_LOGGER_H_

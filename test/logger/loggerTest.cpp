@@ -1,6 +1,7 @@
 // File:  loggerTest.cpp
 // Date:  9/15/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Application for testing two logging classes:
 //        TimeHistoryLog and CombinedLogger.
 
@@ -16,6 +17,8 @@
 #include "timeHistoryLog.h"
 
 using namespace std;
+
+void LoggingFunctionTakingOStreamArg(ostream& s);
 
 // Application entry point
 int main(int, char *[])
@@ -38,15 +41,22 @@ int main(int, char *[])
 	cout << "Beginning test of CombinedLogger" << endl;
 	cout << "Output will be written to stdout and sousVide.log:" << endl << endl;
 
-	CombinedLogger::GetLogger() << "Here's the first entry" << endl;
-	sleep(1);
-	CombinedLogger::GetLogger() << "Here's the second" << endl;
-	sleep(3);
-	CombinedLogger::GetLogger() << "And now the third (and last)" << endl;
+	// We use a separate function here, because we want to be able to pass our logger
+	// to funcitons taking an ostream argument, and we demonstrate that here
+	LoggingFunctionTakingOStreamArg(CombinedLogger::GetLogger());
 
 	CombinedLogger::Destroy();
 
 	cout << "Ending test of CombinedLogger" << endl;
 
 	return 0;
+}
+
+void LoggingFunctionTakingOStreamArg(ostream& s)
+{
+	s << "Here's the first entry" << endl;
+	sleep(1);
+	s << "Here's the second" << endl;
+	sleep(3);
+	s << "And now the third (and last)" << endl;
 }

@@ -1,6 +1,7 @@
 // File:  logger.h
 // Date:  9/3/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Generic logging object.  Note that this class is NOT thread-safe!
 
 #ifndef LOGGER_H_

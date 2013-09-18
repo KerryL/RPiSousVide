@@ -1,6 +1,7 @@
 // File:  piController.cpp
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Basic PI controller.  Uses "ideal" form of controller: Kp * (1 + 1 / (Ti * s)).
 
 #ifndef PI_CONTROLLER_H_
@@ -20,10 +21,11 @@ public:
 	void Reset(double value);
 	double Update(double error);
 
-	// TODO:  Options for: filtering?  Equation form?
-
 protected:
+	static const double nearlyZero;
+
 	const double timeStep;// [sec]
+
 	double kp, ti;
 	double errorIntegral;
 	double highLimit, lowLimit;

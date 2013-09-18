@@ -1,6 +1,7 @@
 // File:  mutexLocker.h
 // Date:  9/16/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Helper function for pThread mutexes.  Locks a mutex when created,
 //        releases when destroyed.  This can be used to ease handling of
 //        mutexes in a function with multiple control paths.

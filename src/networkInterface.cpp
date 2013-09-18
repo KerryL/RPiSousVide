@@ -1,6 +1,7 @@
 // File:  networkInterface.cpp
 // Date:  9/3/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Interface for Ethernet communication with front end.
 
 // Standard C++ headers
@@ -31,7 +32,7 @@
 //==========================================================================
 NetworkInterface::NetworkInterface(NetworkConfiguration configuration)
 {
-	socket = new LinuxSocket(LinuxSocket::SocketTCPServer, /*CombinedLogger::GetLogger()*/std::cout);
+	socket = new LinuxSocket(LinuxSocket::SocketTCPServer, CombinedLogger::GetLogger());
 	socket->Create(configuration.port);
 	socket->SetBlocking(false);
 }

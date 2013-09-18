@@ -1,6 +1,7 @@
 // File:  sousVide.cpp
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Main object for sous vide machine.
 
 // Standard C++ headers
@@ -15,9 +16,6 @@
 
 // *nix standard headers
 #include <unistd.h>
-
-// Wiring Pi headers
-#include <wiringPi.h>
 
 // Local headers
 #include "sousVide.h"
@@ -49,8 +47,6 @@
 //==========================================================================
 int main(int argc, char *argv[])
 {
-	wiringPiSetup();
-
 	bool autoTune(false);
 	if (argc == 2)
 	{
@@ -111,7 +107,7 @@ const std::string SousVide::configFileName = "sousVide.rc";
 //		None
 //
 //==========================================================================
-SousVide::SousVide(bool autoTune) : configuration(/*CombinedLogger::GetLogger()*/std::cout)
+SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger())
 {
 	state = StateOff;
 	nextState = state;
@@ -127,13 +123,16 @@ SousVide::SousVide(bool autoTune) : configuration(/*CombinedLogger::GetLogger()*
 		// TODO:  Allow starting in an "auto-tune" mode?
 		//        Compute max heating rate and suggest reasonable controller gains?
 		//        This will take some testing, but shouldn't be too difficult
-		CombinedLogger::GetLogger() << "Auto-tuning requested!  Unfortunately this has not yet been implement" << std::endl;
+		CombinedLogger::GetLogger()
+			<< "Auto-tuning requested!  Unfortunately this has not yet been implement" << std::endl;
 	}
+
+	sendClientMessage = false;
 
 	ni = new NetworkInterface(configuration.network);
 	controller = new TemperatureController(1.0 / configuration.system.activeFrequency,
 		configuration.controller,
-		new TemperatureSensor(),
+		new TemperatureSensor(configuration.io.sensorID, CombinedLogger::GetLogger()),
 		new PWMOutput(configuration.io.heaterRelayPin));
 	controller->SetRateLimit(configuration.system.maxHeatingRate);
 	pumpRelay = new GPIO(configuration.io.pumpRelayPin, GPIO::DirectionOutput);
@@ -222,12 +221,18 @@ void SousVide::Run()
 
 		// Do the core work for the application
 		if (ni->ReceiveData(receivedMessage))
+		{
 			ProcessMessage(receivedMessage);
+			sendClientMessage = true;
+			// TODO:  Determine when to send client messages -> could be any
+			// time we get a message from the client, or on a timer, etc.
+		}
 		UpdateState();
-		if (true)// FIXME:  How do we decide when to update the front end?  On a timer?  When we receive a message?
+		if (sendClientMessage)
 		{
 			if (!ni->SendData(AssembleMessage()))
 				CombinedLogger::GetLogger() << "Failed to send message to front end" << std::endl;
+			sendClientMessage = false;
 		}
 
 		stop = clock();
@@ -265,23 +270,46 @@ bool SousVide::InterlocksOK(void)
 
 	bool interlocksOK(true);
 
-	// TODO:  Implement this interlock!
-	//configuration.system.interlock.maxSaturationTime;
-
-	double actualTemperature(controller->GetActualTemperature());
-	double cmdTemperature(controller->GetCommandedTemperature());
-
-	if (actualTemperature > configuration.system.interlock.maxTemperature)
+	if (state == StateHeating || state == StateSoaking)
 	{
-		CombinedLogger::GetLogger() << "Temperature limit exceeded (act = " << actualTemperature << " deg F)" << std::endl;
-		interlocksOK = false;
-	}
+		if (controller->OutputIsSaturated())
+		{
+			if (!lastOutputSaturated)
+				saturationStartTime = time(NULL);
+			else
+			{
+				time_t now(time(NULL));
+				if (difftime(now, saturationStartTime) > configuration.system.interlock.maxSaturationTime)
+				{
+					CombinedLogger::GetLogger() << "PWM output max. saturation time exceeded" << std::endl;
+					interlocksOK = false;
+				}
+			}
 
-	if (fabs(cmdTemperature - actualTemperature) > configuration.system.interlock.temperatureTolerance)
-	{
-		CombinedLogger::GetLogger() << "Temperature tolerance exceeded (cmd = " << cmdTemperature << " deg F, act = " << actualTemperature << " deg F)" << std::endl;
-		interlocksOK = false;
+			lastOutputSaturated = true;
+		}
+		else
+			lastOutputSaturated = false;
+
+		double actualTemperature(controller->GetActualTemperature());
+		double cmdTemperature(controller->GetCommandedTemperature());
+
+		if (actualTemperature > configuration.system.interlock.maxTemperature)
+		{
+			CombinedLogger::GetLogger() << "Temperature limit exceeded (act = "
+				<< actualTemperature << " deg F)" << std::endl;
+			interlocksOK = false;
+		}
+
+		if (fabs(cmdTemperature - actualTemperature) > configuration.system.interlock.temperatureTolerance)
+		{
+			CombinedLogger::GetLogger() << "Temperature tolerance exceeded (cmd = "
+				<< cmdTemperature << " deg F, act = " << actualTemperature << " deg F)" << std::endl;
+			interlocksOK = false;
+		}
 	}
+	else
+		lastOutputSaturated = false;
 
 	return interlocksOK;
 }
@@ -374,7 +402,7 @@ void SousVide::EnterState(void)
 		controller->SetPlateauTemperature(plateauTemperature);
 
 		EnterActiveState();
-//		CombinedLogger::GetLogger()->CreateNewTemperatureLog();// TODO:  this is wrong...
+		SetUpTimeHistoryLog();
 	}
 	else if (state == StateSoaking)
 		EnterActiveState();
@@ -426,6 +454,8 @@ void SousVide::ProcessState(void)
 	}
 	else if (state == StateInitializing)
 	{
+		// Reset to update the status of the temperature sensor
+		controller->Reset();
 		if (controller->TemperatureSensorOK() && ni->ClientConnected())
 			nextState = StateReady;
 	}
@@ -442,7 +472,8 @@ void SousVide::ProcessState(void)
 			<< controller->GetActualTemperature()
 			<< controller->GetPWMDuty() << std::endl;
 
-		if (fabs(controller->GetActualTemperature() - plateauTemperature) < configuration.controller.plateauTolerance)
+		if (fabs(controller->GetActualTemperature() - plateauTemperature)
+			< configuration.controller.plateauTolerance)
 			nextState = StateSoaking;
 
 		if (command == CmdStop)
@@ -463,7 +494,8 @@ void SousVide::ProcessState(void)
 	}
 	else if (state == StateCooling)
 	{
-		// Not sure this state is necessary, but could provide interesting information on heat transfer of unit to environment...
+		// Not sure this state is necessary, but could provide interesting
+		// information on heat transfer of unit to environment...
 
 		*thLog << controller->GetActualTemperature()
 			<< controller->GetActualTemperature()
@@ -476,7 +508,8 @@ void SousVide::ProcessState(void)
 	else if (state == StateError)
 	{
 		time_t now = time(NULL);
-		if (difftime(now, stateStartTime) > configuration.system.interlock.minErrorTime && command == CmdReset)
+		if (difftime(now, stateStartTime) > configuration.system.interlock.minErrorTime &&
+			command == CmdReset)
 			nextState = StateInitializing;
 	}
 	else
@@ -642,28 +675,36 @@ void SousVide::ProcessMessage(const FrontToBackMessage &receivedMessage)
 			plateauTemperature = receivedMessage.plateauTemperature;
 			soakTime = receivedMessage.soakTime;
 
-			CombinedLogger::GetLogger() << "Received START command (" << soakTime << " sec at " << plateauTemperature << " deg F)" << std::endl;
+			CombinedLogger::GetLogger() << "Received START command (" << soakTime
+				<< " sec at " << plateauTemperature << " deg F)" << std::endl;
 		}
 		else
-			CombinedLogger::GetLogger() << "Received START command, but system is not in Ready state (state = " << GetStateName() << ")" << std::endl;
+			CombinedLogger::GetLogger()
+			<< "Received START command, but system is not in Ready state (state = "
+			<< GetStateName() << ")" << std::endl;
 	}
 	else if (receivedMessage.command == CmdStop)
 	{
 		if (state == StateHeating || state == StateCooling)
 			CombinedLogger::GetLogger() << "Received STOP command" << std::endl;
 		else
-			CombinedLogger::GetLogger() << "Received STOP command, but system is not in an active state (state = " << GetStateName() << ")" << std::endl;
+			CombinedLogger::GetLogger()
+			<< "Received STOP command, but system is not in an active state (state = "
+			<< GetStateName() << ")" << std::endl;
 	}
 	else if (receivedMessage.command == CmdReset)
 	{
 		if (state == StateCooling || state == StateError)
 			CombinedLogger::GetLogger() << "Received RESET command" << std::endl;
 		else
-			CombinedLogger::GetLogger() << "Received RESET command, but system is not in resettable state (state = " << GetStateName() << ")" << std::endl;
+			CombinedLogger::GetLogger()
+			<< "Received RESET command, but system is not in resettable state (state = "
+			<< GetStateName() << ")" << std::endl;
 	}
 	else
 	{
-		CombinedLogger::GetLogger() << "Received unknown command from front end:  " << receivedMessage.command << std::endl;
+		CombinedLogger::GetLogger() << "Received unknown command from front end:  "
+			<< receivedMessage.command << std::endl;
 		return;
 	}
 }
@@ -806,7 +847,8 @@ void SousVide::CleanUpTimeHistoryLog(void)
 //==========================================================================
 void SousVide::UpdateTimingStatistics(double elapsed)
 {
-	// TODO:  This can be improved by breaking active and idle times apart and reporting statistics independently for each category
+	// TODO:  This can be improved by breaking active and idle times apart and
+	// reporting statistics independently for each category
 	clock_t now(clock());
 	double totalElapsed = double(now - lastUpdate) / (double)CLOCKS_PER_SEC;
 	lastUpdate = now;
@@ -828,14 +870,20 @@ void SousVide::UpdateTimingStatistics(double elapsed)
 		double totalAverage(AverageVector(frameTimes));
 		double busyAverage(AverageVector(busyTimes));
 
-		CombinedLogger::GetLogger() << "Timing statistics for last " << maxElements << " frames:" << std::endl;
-		CombinedLogger::GetLogger() << "    Min total period: " << *std::min_element(frameTimes.begin(), frameTimes.end()) << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Max total period: " << *std::max_element(frameTimes.begin(), frameTimes.end()) << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Avg total period: " << totalAverage << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Min busy period: " << *std::min_element(busyTimes.begin(), busyTimes.end()) << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Max busy period: " << *std::max_element(busyTimes.begin(), busyTimes.end()) << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Avg busy period: " << busyAverage << " sec ("
-			<< busyAverage / totalAverage * 100.0 << "%)" << std::endl;
+		CombinedLogger::GetLogger() << "Timing statistics for last "
+			<< maxElements << " frames:" << std::endl;
+		CombinedLogger::GetLogger() << "    Min total period: "
+			<< *std::min_element(frameTimes.begin(), frameTimes.end()) << " sec" << std::endl;
+		CombinedLogger::GetLogger() << "    Max total period: "
+			<< *std::max_element(frameTimes.begin(), frameTimes.end()) << " sec" << std::endl;
+		CombinedLogger::GetLogger() << "    Avg total period: "
+			<< totalAverage << " sec" << std::endl;
+		CombinedLogger::GetLogger() << "    Min busy period: "
+			<< *std::min_element(busyTimes.begin(), busyTimes.end()) << " sec" << std::endl;
+		CombinedLogger::GetLogger() << "    Max busy period: "
+			<< *std::max_element(busyTimes.begin(), busyTimes.end()) << " sec" << std::endl;
+		CombinedLogger::GetLogger() << "    Avg busy period: "
+			<< busyAverage << " sec (" << busyAverage / totalAverage * 100.0 << "%)" << std::endl;
 	}
 
 	assert(frameTimes.size() == busyTimes.size());

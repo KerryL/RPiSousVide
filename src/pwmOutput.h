@@ -1,6 +1,7 @@
 // File:  pwmOutput.h
 // Date:  8/31/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  C++ wrapper for Wiring Pi PWM methods.  Currently supports only hardware PWM.
 
 #ifndef PWM_OUTPUT_H_
@@ -28,7 +29,7 @@ public:
 private:
 	double frequency;// [Hz]
 	double duty;// [%]
-	/*static */const unsigned int range;
+	const unsigned int range;
 };
 
 #endif// PWM_OUTPUT_H_

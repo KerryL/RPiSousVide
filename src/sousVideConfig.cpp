@@ -1,6 +1,7 @@
 // File:  sousVideConfig.cpp
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Configuration options (to be read from file) for sous vide service.
 
 // Standard C++ headers
@@ -32,6 +33,7 @@ const std::string SousVideConfig::ConfigFields::NetworkPortKey						= "port";
 
 const std::string SousVideConfig::ConfigFields::IOPumpPinKey						= "pumpPin";
 const std::string SousVideConfig::ConfigFields::IOHeaterPinKey						= "heaterPin";
+const std::string SousVideConfig::ConfigFields::IOSensorIDKey						= "sensorID";
 
 const std::string SousVideConfig::ConfigFields::ControllerKpKey						= "kp";
 const std::string SousVideConfig::ConfigFields::ControllerTiKey						= "ti";
@@ -144,6 +146,7 @@ void SousVideConfig::AssignDefaults(void)
 
 	io.pumpRelayPin = 0;
 	io.heaterRelayPin = 1;
+	io.sensorID = "";// invalid -> must be specified by user
 
 	controller.kp = -1.0;// invalid -> must be specified by user
 	controller.ti = 0.0;
@@ -263,6 +266,12 @@ bool SousVideConfig::IOConfigIsOK(void) const
 	{
 		outStream << "IO:  " << ConfigFields::IOPumpPinKey << " and "
 			<< ConfigFields::IOHeaterPinKey << " must be unique" << std::endl;
+		ok = false;
+	}
+
+	if (io.sensorID.length() != 15)
+	{
+		outStream << "IO:  " << ConfigFields::IOSensorIDKey << " must contain 15 characters" << std::endl;
 		ok = false;
 	}
 
@@ -488,6 +497,8 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		io.pumpRelayPin = atoi(data.c_str());
 	else if (field.compare(ConfigFields::IOHeaterPinKey) == 0)
 		io.heaterRelayPin = atoi(data.c_str());
+	else if (field.compare(ConfigFields::IOSensorIDKey) == 0)
+		io.sensorID = data;
 	else if (field.compare(ConfigFields::ControllerKpKey) == 0)
 		controller.kp = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerTiKey) == 0)

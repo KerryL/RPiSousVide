@@ -1,6 +1,7 @@
 // File:  timeHistorylog.cpp
 // Date:  9/4/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Class for generating plottable time-history data, using measured system time
 //        (down to microseconds - unsure of accuracy) to generate time column.  NOT thread-safe.
 

@@ -1,6 +1,7 @@
 // File:  temperatureController.h
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Temperature controller object.  Closes a loop around a temperature sensor.
 
 // Standard C++ headers
@@ -38,6 +39,7 @@ TemperatureController::TemperatureController(double timeStep,
 {
 	SetOutputClamp(0.0, 1.0);
 	SetOutputEnable(false);
+	sensorOK = false;
 }
 
 //==========================================================================
@@ -82,7 +84,10 @@ TemperatureController::~TemperatureController()
 void TemperatureController::Reset(void)
 {
 	PIController::Reset();
-	commandedTemperature = sensor->GetTemperature();
+	if (sensor->GetTemperature(commandedTemperature))
+		sensorOK = true;
+	else
+		sensorOK = false;
 }
 
 //==========================================================================
@@ -107,13 +112,41 @@ void TemperatureController::Update(void)
 	if (!enabled)
 		return;
 
-	actualTemperature = sensor->GetTemperature();
+	if (!sensor->GetTemperature(actualTemperature))
+		sensorOK = true;
+	else
+	{
+		sensorOK = false;
+		return;// TODO:  Generate error?
+	}
+
 	commandedTemperature += rate * timeStep;
 	if (commandedTemperature > plateauTemperature)
 		commandedTemperature = plateauTemperature;
 
 	pwmOut->SetDutyCycle(PIController::Update(
 		commandedTemperature - actualTemperature));
+}
+
+//==========================================================================
+// Class:			TemperatureController
+// Function:		TemperatureSensorOK
+//
+// Description:		Checks the status of the temperature controller.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for OK, false otherwise
+//
+//==========================================================================
+bool TemperatureController::TemperatureSensorOK(void) const
+{
+	return false;
 }
 
 //==========================================================================

@@ -1,6 +1,7 @@
 // File:  piController.cpp
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Basic PI controller.  Uses "ideal" form of controller: Kp * (1 + 1 / (Ti * s)).
 
 // Standard C++ headers
@@ -8,6 +9,24 @@
 
 // Local headers
 #include "piController.h"
+
+//==========================================================================
+// Class:			PIController
+// Function:		Constant definitions
+//
+// Description:		Constant definitions for PIController class.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+const double PIController::nearlyZero = 1.0e-16;
 
 //==========================================================================
 // Class:			PIController
@@ -194,7 +213,7 @@ void PIController::Reset(double value)
 double PIController::Update(double error)
 {
 	double control;
-	if (ti == 0.0)// TODO:  nearly zero?
+	if (fabs(ti) < nearlyZero)
 		control = kp * error;
 	else
 	{
@@ -202,7 +221,7 @@ double PIController::Update(double error)
 		control = kp * (error + errorIntegral / ti);
 	}
 
-	if (highLimit != lowLimit)// TODO:  nearly zero?
+	if (fabs(highLimit - lowLimit) < nearlyZero)
 	{
 		if (control > highLimit)
 			control = highLimit;

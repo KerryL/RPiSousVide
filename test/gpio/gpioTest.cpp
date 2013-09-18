@@ -1,6 +1,7 @@
 // File:  gpioTest.cpp
 // Date:  8/30/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Test application for GPIO class.
 
 // Standard C++ headers
@@ -13,19 +14,13 @@
 // *nix standard headers
 #include <unistd.h>
 
-// Wiring Pi headers
-#include <wiringPi.h>
-
+// Local headers
 #include "gpio.h"
 #include "pwmOutput.h"
 
 // Entry point
 int main(int argc, char *argv[])
 {
-	// Since GPIO class uses WiringPi library, this MUST be called
-	// prior to creating any GPIO objects (including PWMOutput)
-	wiringPiSetup();
-
 	clock_t start, stop;
 	double elapsed;
 	double timeStep(0.01);// [sec]

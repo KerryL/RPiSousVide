@@ -1,6 +1,7 @@
 // File:  clientTest.cpp
 // Date:  9/10/2013
 // Auth:  K. Loux
+// Copy:  (c) Copyright 2013
 // Desc:  Client socket test application.
 
 // Comment out the next line to test UDP sockets
