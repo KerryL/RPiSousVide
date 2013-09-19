@@ -8,14 +8,14 @@
 #define TEMPERATURE_CONTROLLER_H_
 
 // Local headers
-#include "piController.h"
+#include "pidController.h"
 
 // Local forward declarations
 class ControllerConfiguration;
 class TemperatureSensor;
 class PWMOutput;
 
-class TemperatureController : private PIController
+class TemperatureController : private PIDController
 {
 public:
 	TemperatureController(double timeStep, ControllerConfiguration configuration,
@@ -31,7 +31,7 @@ public:
 
 	double GetActualTemperature(void) const { return actualTemperature; };
 	double GetCommandedTemperature(void) const { return commandedTemperature; };
-	bool TemperatureSensorOK(void) const;
+	bool TemperatureSensorOK(void) const { return sensorOK; };
 
 	double GetPWMDuty(void) const;
 	bool OutputIsSaturated(void) const;

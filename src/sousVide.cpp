@@ -125,6 +125,13 @@ SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger())
 		//        This will take some testing, but shouldn't be too difficult
 		CombinedLogger::GetLogger()
 			<< "Auto-tuning requested!  Unfortunately this has not yet been implement" << std::endl;
+
+		// System model used for autotuning:
+		// Tank with heating element and heat loss to environment
+		// Assumptions:
+		//   Fluid is well mixed, but no heat is added via mixing
+		//   Ambient temperature is constant (i.e. we're not modeling the increase in room temperature as the tank looses heat)
+		//   Constant fluid properties vs. temperature
 	}
 
 	sendClientMessage = false;
@@ -265,9 +272,6 @@ void SousVide::Run()
 //==========================================================================
 bool SousVide::InterlocksOK(void)
 {
-	// TODO:  Implement the following interlocks:
-	// Lost communication with temperature sensor?
-
 	bool interlocksOK(true);
 
 	if (state == StateHeating || state == StateSoaking)
@@ -296,15 +300,21 @@ bool SousVide::InterlocksOK(void)
 
 		if (actualTemperature > configuration.system.interlock.maxTemperature)
 		{
-			CombinedLogger::GetLogger() << "Temperature limit exceeded (act = "
+			CombinedLogger::GetLogger() << "INTERLOCK:  Temperature limit exceeded (act = "
 				<< actualTemperature << " deg F)" << std::endl;
 			interlocksOK = false;
 		}
 
 		if (fabs(cmdTemperature - actualTemperature) > configuration.system.interlock.temperatureTolerance)
 		{
-			CombinedLogger::GetLogger() << "Temperature tolerance exceeded (cmd = "
+			CombinedLogger::GetLogger() << "INTERLOCK:  Temperature tolerance exceeded (cmd = "
 				<< cmdTemperature << " deg F, act = " << actualTemperature << " deg F)" << std::endl;
+			interlocksOK = false;
+		}
+
+		if (!controller->TemperatureSensorOK())
+		{
+			CombinedLogger::GetLogger() << "INTERLOCK:  Bad result from temperature sensor" << std::endl;
 			interlocksOK = false;
 		}
 	}

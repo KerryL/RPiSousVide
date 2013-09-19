@@ -35,7 +35,8 @@
 TemperatureController::TemperatureController(double timeStep,
 	ControllerConfiguration configuration,
 	TemperatureSensor *sensor, PWMOutput *pwmOut)
-	: PIController(timeStep, configuration.kp, configuration.ti), sensor(sensor), pwmOut(pwmOut)
+	: PIDController(timeStep, configuration.kp, configuration.ti, configuration.kd,
+	configuration.ff, configuration.td, configuration.tf), sensor(sensor), pwmOut(pwmOut)
 {
 	SetOutputClamp(0.0, 1.0);
 	SetOutputEnable(false);
@@ -83,9 +84,11 @@ TemperatureController::~TemperatureController()
 //==========================================================================
 void TemperatureController::Reset(void)
 {
-	PIController::Reset();
 	if (sensor->GetTemperature(commandedTemperature))
+	{
 		sensorOK = true;
+		PIDController::Reset(commandedTemperature);
+	}
 	else
 		sensorOK = false;
 }
@@ -124,29 +127,8 @@ void TemperatureController::Update(void)
 	if (commandedTemperature > plateauTemperature)
 		commandedTemperature = plateauTemperature;
 
-	pwmOut->SetDutyCycle(PIController::Update(
-		commandedTemperature - actualTemperature));
-}
-
-//==========================================================================
-// Class:			TemperatureController
-// Function:		TemperatureSensorOK
-//
-// Description:		Checks the status of the temperature controller.
-//
-// Input Arguments:
-//		None
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		bool, true for OK, false otherwise
-//
-//==========================================================================
-bool TemperatureController::TemperatureSensorOK(void) const
-{
-	return false;
+	pwmOut->SetDutyCycle(PIDController::Update(
+		commandedTemperature, actualTemperature));
 }
 
 //==========================================================================

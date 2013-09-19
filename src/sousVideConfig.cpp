@@ -36,8 +36,11 @@ const std::string SousVideConfig::ConfigFields::IOHeaterPinKey						= "heaterPin
 const std::string SousVideConfig::ConfigFields::IOSensorIDKey						= "sensorID";
 
 const std::string SousVideConfig::ConfigFields::ControllerKpKey						= "kp";
+const std::string SousVideConfig::ConfigFields::ControllerKdKey						= "kd";
 const std::string SousVideConfig::ConfigFields::ControllerTiKey						= "ti";
 const std::string SousVideConfig::ConfigFields::ControllerFfKey						= "ff";
+const std::string SousVideConfig::ConfigFields::ControllerTdKey						= "td";
+const std::string SousVideConfig::ConfigFields::ControllerTfKey						= "tf";
 const std::string SousVideConfig::ConfigFields::ControllerPlateauToleranceKey		= "plateauTolerance";
 
 const std::string SousVideConfig::ConfigFields::InterlockMaxSaturationTimeKey		= "maxSaturationTime";
@@ -151,7 +154,10 @@ void SousVideConfig::AssignDefaults(void)
 
 	controller.kp = -1.0;// invalid -> must be specified by user
 	controller.ti = 0.0;
+	controller.kd = 0.0;
 	controller.ff = 0.0;
+	controller.td = 1.0;
+	controller.tf = 1.0;
 	controller.plateauTolerance = 1.0;// [deg F]
 
 	system.interlock.maxSaturationTime = 10.0;// [sec]
@@ -313,9 +319,27 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 		ok = false;
 	}
 
+	if (controller.kd < 0.0)
+	{
+		outStream << "Controller:  " << ConfigFields::ControllerKdKey << " must be positive" << std::endl;
+		ok = false;
+	}
+
 	if (controller.ff < 0.0)
 	{
 		outStream << "Controller:  " << ConfigFields::ControllerFfKey << " must be positive" << std::endl;
+		ok = false;
+	}
+
+	if (controller.td <= 0.0)
+	{
+		outStream << "Controller:  " << ConfigFields::ControllerTdKey << " must be strictly positive" << std::endl;
+		ok = false;
+	}
+
+	if (controller.tf <= 0.0)
+	{
+		outStream << "Controller:  " << ConfigFields::ControllerTfKey << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
@@ -511,8 +535,14 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		controller.kp = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerTiKey) == 0)
 		controller.ti = atof(data.c_str());
+	else if (field.compare(ConfigFields::ControllerKdKey) == 0)
+		controller.kd = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerFfKey) == 0)
 		controller.ff = atof(data.c_str());
+	else if (field.compare(ConfigFields::ControllerTdKey) == 0)
+		controller.td = atof(data.c_str());
+	else if (field.compare(ConfigFields::ControllerTfKey) == 0)
+		controller.tf = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerPlateauToleranceKey) == 0)
 		controller.plateauTolerance = atof(data.c_str());
 	else if (field.compare(ConfigFields::InterlockMaxSaturationTimeKey) == 0)

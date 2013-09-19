@@ -26,9 +26,15 @@ struct IOConfiguration
 
 struct ControllerConfiguration
 {
+	// Gains
 	double kp;// [%/deg F]
 	double ti;// [sec]
+	double kd;// [%-sec/deg F]
 	double ff;// [%-sec/deg F]
+
+	// Derivative time constants
+	double td;// [sec]
+	double tf;// [sec]
 
 	double plateauTolerance;// [deg F]
 };
@@ -90,7 +96,10 @@ private:
 
 		static const std::string ControllerKpKey;
 		static const std::string ControllerTiKey;
+		static const std::string ControllerKdKey;
 		static const std::string ControllerFfKey;
+		static const std::string ControllerTdKey;
+		static const std::string ControllerTfKey;
 		static const std::string ControllerPlateauToleranceKey;
 
 		static const std::string InterlockMaxSaturationTimeKey;

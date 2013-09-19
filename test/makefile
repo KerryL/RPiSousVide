@@ -7,7 +7,8 @@ TESTDIRS = \
 	sockets/server \
 	sockets/client \
 	logger \
-	config
+	config \
+	derivativeFilter
 
 .PHONY: all clean
 

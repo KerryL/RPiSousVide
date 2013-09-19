@@ -1,5 +1,7 @@
 Raspbery Pi Sous Vide Controller
 
+NOTE:  This project includes cJSON, which is licesned under the MIT license.  Read more here:  sourceforge.net/project/cjson.  There is nothing to download or install, the source files are included in this project's src/ directory.  To make compiling easier (to avoid modifying the makefile), cJSON.c was renamed to cJSON.cpp.
+
 Starting with a brand new Raspberry Pi, follow these instructions to get started.
 
 1. Follow these instructions to prepare Raspberry Pi:
