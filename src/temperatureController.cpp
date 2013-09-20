@@ -36,7 +36,7 @@ TemperatureController::TemperatureController(double timeStep,
 	ControllerConfiguration configuration,
 	TemperatureSensor *sensor, PWMOutput *pwmOut)
 	: PIDController(timeStep, configuration.kp, configuration.ti, configuration.kd,
-	configuration.ff, configuration.td, configuration.tf), sensor(sensor), pwmOut(pwmOut)
+	configuration.kf, configuration.td, configuration.tf), sensor(sensor), pwmOut(pwmOut)
 {
 	SetOutputClamp(0.0, 1.0);
 	SetOutputEnable(false);

@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 {
 	if (argc != 2)
 	{
-		cout << "Usage:  configTest pathToFile" << endl;
+		cout << "Usage:  " << argv[0] << " pathToFile" << endl;
 		return 1;
 	}
 
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 	cout << "  Proportional Gain = " << config.controller.kp << " %/deg F" << endl;
 	cout << "  Integral Time Constant = " << config.controller.ti << " sec" << endl;
 	cout << "  Derivative Gain = " << config.controller.kd << " %-sec/deg F" << endl;
-	cout << "  Feed Forward Gain = " << config.controller.ff << " %-sec/deg F" << endl;
+	cout << "  Feed Forward Gain = " << config.controller.kf << " %-sec/deg F" << endl;
 	cout << "  Derivative Filter Time Constant = " << config.controller.td << " sec" << endl;
 	cout << "  FF Filter Time Constant = " << config.controller.tf << " sec" << endl;
 	cout << "  Plateau Tolerance = " << config.controller.plateauTolerance << " deg F" << endl;

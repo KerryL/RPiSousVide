@@ -5,7 +5,7 @@
 // Desc:  Basic PI controller.  Uses "ideal" form of controller:
 //        Kp * (1 + 1 / (Ti * s) + Kd * s / (Td * s + 1)) * E(s) + F(s)
 //        Additional feed forward term (F) is:
-//        F(s) = Ff * s / (Tf * s + 1) * U(s)
+//        F(s) = Kf * s / (Tf * s + 1) * U(s)
 
 #ifndef PID_CONTROLLER_H_
 #define PID_CONTROLLER_H_
@@ -17,12 +17,12 @@ class PIDController
 {
 public:
 	PIDController(double timeStep, double kp = 1.0, double ti = 0.0,
-		double kd = 0.0, double ff = 0.0, double td = 1.0, double tf = 1.0);
+		double kd = 0.0, double kf = 0.0, double td = 1.0, double tf = 1.0);
 
 	void SetKp(double kp);
 	void SetTi(double ti);
 	void SetKd(double ti);
-	void SetFf(double ff);
+	void SetKf(double kf);
 	void SetTd(double td);
 	void SetTf(double tf);
 
@@ -41,7 +41,7 @@ protected:
 
 	const double timeStep;// [sec]
 
-	double kp, ti, kd, ff;
+	double kp, ti, kd, kf;
 	double error, errorIntegral;
 	double highLimit, lowLimit;
 

@@ -5,7 +5,7 @@
 // Desc:  Basic PI controller.  Uses "ideal" form of controller:
 //        Kp * (1 + 1 / (Ti * s) + Kd * s / (Td * s + 1)) * E(s) + F(s)
 //        Additional feed forward term (F) is:
-//        F(s) = Ff * s / (Tf * s + 1) * U(s)
+//        F(s) = Kf * s / (Tf * s + 1) * U(s)
 
 // Standard C++ headers
 #include <cmath>
@@ -42,7 +42,7 @@ const double PIDController::nearlyZero = 1.0e-16;
 //		kp			= double, initial value of proportional gain
 //		ti			= double, initial value of integral time constant [sec]
 //		kd			= double, initial value of derivative gain
-//		ff			= double, initial value of feed-forward gain
+//		kf			= double, initial value of feed-forward gain
 //		td			= double, initial value of derivative filter time constant [sec]
 //		tf			= double, initial value of feed-forward filter time constant [sec]
 //
@@ -54,13 +54,13 @@ const double PIDController::nearlyZero = 1.0e-16;
 //
 //==========================================================================
 PIDController::PIDController(double timeStep, double kp, double ti,
-		double kd, double ff, double td, double tf) : timeStep(timeStep),
+		double kd, double kf, double td, double tf) : timeStep(timeStep),
 		errorDerivative(timeStep, td), commandDerivative(timeStep, tf)
 {
 	SetKp(kp);
 	SetTi(ti);
 	SetKd(kd);
-	SetFf(ff);
+	SetKf(kf);
 
 	Reset();
 	SetOutputClamp(0.0);
@@ -131,12 +131,12 @@ void PIDController::SetKd(double ti)
 
 //==========================================================================
 // Class:			PIDController
-// Function:		SetFf
+// Function:		SetKf
 //
 // Description:		Sets the feed-forward gain.
 //
 // Input Arguments:
-//		ff	= double, value of feed-forward gain
+//		kf	= double, value of feed-forward gain
 //
 // Output Arguments:
 //		None
@@ -145,9 +145,9 @@ void PIDController::SetKd(double ti)
 //		None
 //
 //==========================================================================
-void PIDController::SetFf(double ff)
+void PIDController::SetKf(double ff)
 {
-	this->ff = fabs(ff);
+	this->kf = fabs(kf);
 }
 
 //==========================================================================
@@ -303,7 +303,7 @@ double PIDController::Update(double reference, double feedback)
 		integralTerm = errorIntegral / ti;
 	}
 
-	double control = kp * (error + integralTerm + errorRate * kd) + commandRate * ff;
+	double control = kp * (error + integralTerm + errorRate * kd) + commandRate * kf;
 
 	if (fabs(highLimit - lowLimit) < nearlyZero)
 	{

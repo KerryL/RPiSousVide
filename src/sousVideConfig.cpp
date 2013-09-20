@@ -38,7 +38,7 @@ const std::string SousVideConfig::ConfigFields::IOSensorIDKey						= "sensorID";
 const std::string SousVideConfig::ConfigFields::ControllerKpKey						= "kp";
 const std::string SousVideConfig::ConfigFields::ControllerKdKey						= "kd";
 const std::string SousVideConfig::ConfigFields::ControllerTiKey						= "ti";
-const std::string SousVideConfig::ConfigFields::ControllerFfKey						= "ff";
+const std::string SousVideConfig::ConfigFields::ControllerKfKey						= "kf";
 const std::string SousVideConfig::ConfigFields::ControllerTdKey						= "td";
 const std::string SousVideConfig::ConfigFields::ControllerTfKey						= "tf";
 const std::string SousVideConfig::ConfigFields::ControllerPlateauToleranceKey		= "plateauTolerance";
@@ -155,7 +155,7 @@ void SousVideConfig::AssignDefaults(void)
 	controller.kp = -1.0;// invalid -> must be specified by user
 	controller.ti = 0.0;
 	controller.kd = 0.0;
-	controller.ff = 0.0;
+	controller.kf = 0.0;
 	controller.td = 1.0;
 	controller.tf = 1.0;
 	controller.plateauTolerance = 1.0;// [deg F]
@@ -325,9 +325,9 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 		ok = false;
 	}
 
-	if (controller.ff < 0.0)
+	if (controller.kf < 0.0)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerFfKey << " must be positive" << std::endl;
+		outStream << "Controller:  " << ConfigFields::ControllerKfKey << " must be positive" << std::endl;
 		ok = false;
 	}
 
@@ -537,8 +537,8 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		controller.ti = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerKdKey) == 0)
 		controller.kd = atof(data.c_str());
-	else if (field.compare(ConfigFields::ControllerFfKey) == 0)
-		controller.ff = atof(data.c_str());
+	else if (field.compare(ConfigFields::ControllerKfKey) == 0)
+		controller.kf = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerTdKey) == 0)
 		controller.td = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerTfKey) == 0)

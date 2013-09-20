@@ -8,7 +8,8 @@ TESTDIRS = \
 	sockets/client \
 	logger \
 	config \
-	derivativeFilter
+	derivativeFilter \
+	autoTuner
 
 .PHONY: all clean
 
