@@ -93,8 +93,6 @@ int main(int argc, char *argv[])
 //==========================================================================
 const std::string SousVide::configFileName = "sousVide.rc";
 const std::string SousVide::autoTuneLogName = "autoTune.log";
-const double SousVide::maxAutoTuneTime(30.0 * 60.0);// [sec]
-const double SousVide::maxAutoTuneTemperatureRise(15.0);// [deg F]
 
 //==========================================================================
 // Class:			SousVide
@@ -653,8 +651,8 @@ void SousVide::ProcessState(void)
 		*thLog << controller->GetActualTemperature() << std::endl;
 
 		time_t now = time(NULL);
-		if (difftime(now, stateStartTime) > maxAutoTuneTime ||
-			controller->GetActualTemperature() - startTemperature > maxAutoTuneTemperatureRise)
+		if (difftime(now, stateStartTime) > configuration.system.maxAutoTuneTime ||
+			controller->GetActualTemperature() - startTemperature > configuration.system.maxAutoTuneTemperatureRise)
 			nextState = StateInitializing;
 
 		if (command == CmdStop)

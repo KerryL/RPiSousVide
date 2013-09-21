@@ -38,3 +38,5 @@ kp = 1# [%/deg F]
 #pwmFrequency = 10# [Hz]
 #statisticsTime = 10# [sec] (0 == OFF)
 maxHeatingRate = 1# [deg F/sec]
+#maxAutoTuneTime = 1800# [sec]
+#maxAutoTuneTemperatureRise = 15# [deg F]

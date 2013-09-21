@@ -52,6 +52,8 @@ const std::string SousVideConfig::ConfigFields::SystemIdleFrequencyKey				= "idl
 const std::string SousVideConfig::ConfigFields::SystemActiveFrequencyKey			= "activeFrequency";
 const std::string SousVideConfig::ConfigFields::SystemStatisticsTimeKey				= "statisticsTime";
 const std::string SousVideConfig::ConfigFields::SystemMaxHeatingRateKey				= "maxHeatingRate";
+const std::string SousVideConfig::ConfigFields::SystemMaxAutoTuneTimeKey			= "maxAutoTuneTime";
+const std::string SousVideConfig::ConfigFields::SystemMaxAutoTuneTemperatureRiseKey	= "maxAutoTuneTemperatureRise";
 
 //==========================================================================
 // Class:			SousVideConfig
@@ -169,6 +171,8 @@ void SousVideConfig::AssignDefaults(void)
 	system.activeFrequency = 10.0;// [Hz]
 	system.statisticsTime = 10.0;// [sec]
 	system.maxHeatingRate = -1.0;// [deg F/sec] invalid -> must be specified by user
+	system.maxAutoTuneTime = 30.0 * 60.0;// [sec]
+	system.maxAutoTuneTemperatureRise = 15.0;// [deg F]
 }
 
 //==========================================================================
@@ -443,7 +447,7 @@ bool SousVideConfig::SystemConfigIsOK(void) const
 
 	if (system.statisticsTime < 0.0)
 	{
-		outStream << "System:  " << ConfigFields::SystemStatisticsTimeKey << " must be strictly positive" << std::endl;
+		outStream << "System:  " << ConfigFields::SystemStatisticsTimeKey << " must be positive" << std::endl;
 		ok = false;
 	}
 
@@ -451,6 +455,18 @@ bool SousVideConfig::SystemConfigIsOK(void) const
 	{
 		outStream << "System:  " << ConfigFields::SystemMaxHeatingRateKey << " must be strictly positive ("
 			<< ConfigFields::SystemMaxHeatingRateKey << " must be specified)" << std::endl;
+		ok = false;
+	}
+
+	if (system.maxAutoTuneTime <= 0.0)
+	{
+		outStream << "System:  " << ConfigFields::SystemMaxAutoTuneTimeKey << " must be strictly positive" << std::endl;
+		ok = false;
+	}
+
+	if (system.maxAutoTuneTemperatureRise <= 0.0)
+	{
+		outStream << "System:  " << ConfigFields::SystemMaxAutoTuneTemperatureRiseKey << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
@@ -561,6 +577,10 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		system.statisticsTime = atof(data.c_str());
 	else if (field.compare(ConfigFields::SystemMaxHeatingRateKey) == 0)
 		system.maxHeatingRate = atof(data.c_str());
+	else if (field.compare(ConfigFields::SystemMaxAutoTuneTimeKey) == 0)
+		system.maxAutoTuneTime = atof(data.c_str());
+	else if (field.compare(ConfigFields::SystemMaxAutoTuneTemperatureRiseKey) == 0)
+		system.maxAutoTuneTemperatureRise = atof(data.c_str());
 	else
 		outStream << "Unknown config field: " << field << std::endl;
 }

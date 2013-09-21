@@ -57,6 +57,9 @@ struct SystemConfiguration
 	double statisticsTime;// [sec]
 
 	double maxHeatingRate;// [deg F/sec]
+
+	double maxAutoTuneTime;// [sec]
+	double maxAutoTuneTemperatureRise;// [deg F]
 };
 
 struct SousVideConfig
@@ -111,6 +114,8 @@ private:
 		static const std::string SystemActiveFrequencyKey;
 		static const std::string SystemStatisticsTimeKey;
 		static const std::string SystemMaxHeatingRateKey;
+		static const std::string SystemMaxAutoTuneTimeKey;
+		static const std::string SystemMaxAutoTuneTemperatureRiseKey;
 	};
 
 	void SplitFieldFromData(const std::string &line, std::string &field, std::string &data);

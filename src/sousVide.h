@@ -60,8 +60,6 @@ public:
 private:
 	static const std::string configFileName;
 	static const std::string autoTuneLogName;
-	static const double maxAutoTuneTime;// [sec] TODO:  Put these in the config file?
-	static const double maxAutoTuneTemperatureRise;// [deg F]
 
 	SousVideConfig configuration;
 	bool ReadConfiguration(void);

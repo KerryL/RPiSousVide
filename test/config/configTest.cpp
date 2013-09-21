@@ -63,6 +63,8 @@ int main(int argc, char *argv[])
 	cout << "  Active Frequency = " << config.system.activeFrequency << " Hz" << endl;
 	cout << "  Statistics Time = " << config.system.statisticsTime << " sec" << endl;
 	cout << "  Max. Heating Rate = " << config.system.maxHeatingRate << " deg F/sec" << endl;
+	cout << "  Max. Auto-Tune Time = " << config.system.maxAutoTuneTime << " sec" << endl;
+	cout << "  Max. Auto-Tune Temperature Rise = " << config.system.maxAutoTuneTemperatureRise << " deg F" << endl;
 
 	return 0;
 }
