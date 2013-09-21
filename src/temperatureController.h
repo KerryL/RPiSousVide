@@ -28,6 +28,7 @@ public:
 
 	void SetRateLimit(double rate);
 	void SetPlateauTemperature(double temperature);
+	void DirectlySetPWMDuty(double duty);
 
 	double GetActualTemperature(void) const { return actualTemperature; };
 	double GetCommandedTemperature(void) const { return commandedTemperature; };

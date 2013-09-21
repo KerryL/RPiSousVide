@@ -40,8 +40,9 @@ int main(int argc, char *argv[])
 		split = line.find(' ', split + 1);
 		time.push_back(atof(line.substr(0, split).c_str()));
 		temp.push_back(atof(line.substr(split).c_str()));
-		cout << time[time.size() - 1] << ", " << temp[temp.size() - 1] << std::endl;
 	}
+
+	dataFile.close();
 
 	AutoTuner tuner;
 	if (!tuner.ProcessAutoTuneData(time, temp))
@@ -63,8 +64,35 @@ int main(int argc, char *argv[])
 	cout << "  Max. Heat Rate = " << tuner.GetMaxHeatRate() << " deg F/sec" << endl;
 	cout << "  Ambient Temp. = " << tuner.GetAmbientTemperature() << " deg F" << endl;
 
-	// TODO:  simulate response and compare to input data
-	// TODO:  have tuner compute R^2 value (coefficient of determination)
+	std::vector<double> simulatedTemp;
+	std::vector<double> controlInput(time.size(), 1.0);
+	cout << endl << "Simulating time response..." << endl;
+	if (!tuner.GetSimulatedOpenLoopResponse(time, controlInput, simulatedTemp))
+	{
+		cout << "Simulation failed" << endl;
+		return 1;
+	}
+	else
+		cout << "Simulation complete" << endl;
+
+	const std::string resultsFileName("simulationComparison.log");
+	cout << "Writing results to '" << resultsFileName << "'" << endl;
+
+	ofstream simResults(resultsFileName.c_str(), ios::out);
+	if (!simResults.is_open() || !simResults.good())
+	{
+		cout << "Unable to open '" << resultsFileName << "' for output" << endl;
+		return 1;
+	}
+
+	simResults << "Time,Actual Temperature,SimulatedTemperature" << endl;
+	simResults << "[sec],[deg F],[deg F]" << endl;
+
+	unsigned int i;
+	for (i = 0; i < time.size(); i++)
+		simResults << time[i] << "," << temp[i] << "," << simulatedTemp[i] << endl;
+
+	simResults.close();
 
 	return 0;
 }

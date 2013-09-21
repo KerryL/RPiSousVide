@@ -14,5 +14,5 @@ nbproject/private/
 
 *.o
 .src/
-sousVide.log
+*.log
 *.csv

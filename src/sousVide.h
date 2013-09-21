@@ -41,7 +41,7 @@ public:
 		StateSoaking,
 		StateCooling,
 		StateError,
-		//StateAutoTune,
+		StateAutoTune,
 
 		StateCount
 	};
@@ -51,6 +51,7 @@ public:
 		CmdStart,
 		CmdStop,
 		CmdReset,
+		CmdAutoTune,
 		CmdNone
 	};
 
@@ -58,6 +59,10 @@ public:
 
 private:
 	static const std::string configFileName;
+	static const std::string autoTuneLogName;
+	static const double maxAutoTuneTime;// [sec] TODO:  Put these in the config file?
+	static const double maxAutoTuneTemperatureRise;// [deg F]
+
 	SousVideConfig configuration;
 	bool ReadConfiguration(void);
 
@@ -82,9 +87,13 @@ private:
 
 	TimeHistoryLog *thLog;
 	std::ofstream *thLogFile;
-	std::string GetLogFileName(void) const;
+	std::string GetLogFileName(const std::string &activity = "cooking") const;
 	void SetUpTimeHistoryLog(void);
 	void CleanUpTimeHistoryLog(void);
+
+	void SetUpAutoTuneLog(void);
+	bool CleanUpAutoTuneLog(std::vector<double> &time, std::vector<double> &temperature);
+	double startTemperature;// [deg F]
 
 	// Finite state machine
 	State state, nextState;
@@ -98,6 +107,10 @@ private:
 	std::string GetStateName(void);
 
 	bool InterlocksOK(void);
+	bool SaturationTimeExceeded(void);
+	bool TemperatureTrackingToleranceExceeded(void) const;
+	bool MaximumTemperatureExceeded(void) const;
+	bool TemperatureSensorFailed(void) const;
 	time_t saturationStartTime;
 	bool lastOutputSaturated;
 

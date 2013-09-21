@@ -9,8 +9,11 @@
 //
 // Assumptions:
 //   - Fluid is well mixed, but no heat is added via mixing
+
 //   - Ambient temperature is constant (i.e. we're not modeling the increase in
+
 //     room temperature as the tank looses heat)
+
 //   - Constant fluid properties vs. temperature
 //   - No flow in or out of tank
 //   - Constant rate of heat transfer through all tank surfaces (i.e. effect of
@@ -78,7 +81,9 @@
 // on this can be found in the ComputeRecommendedGains method in autoTune.cpp) is then:
 //
 //   Y(s)              Kp * s + Kp / Ti
+
 //   ---- = ---------------------------------------
+
 //   R(s)   s^2 / c2 + (Kp + c1 / c2) * s + Kp / Ti
 
 #ifndef AUTO_TUNER_H_
@@ -113,15 +118,17 @@ public:
 
 	// Open-loop simulation
 	bool GetSimulatedOpenLoopResponse(const std::vector<double> &time,
-		const std::vector<double> &control, std::vector<double> &temperature);
+		const std::vector<double> &control, std::vector<double> &temperature) const;
 	bool GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 		const std::vector<double> &control, std::vector<double> &temperature,
-		double initialTemperature);
+		double initialTemperature) const;
 	bool GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 		const std::vector<double> &control, std::vector<double> &temperature,
-		double initialTemperature, double ambientTemperature);
+		double initialTemperature, double ambientTemperature) const;
 	double GetSimulatedOpenLoopResponse(double deltaT, double control,
-		double initialTemperature, double ambientTemperature);
+		double tankTemperature, double ambientTemperature) const;
+	double PredictRateOfChange(double control, double tankTemperature,
+		double ambientTemperature) const;
 
 private:
 	std::ostream &outStream;

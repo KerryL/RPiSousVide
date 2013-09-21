@@ -6,6 +6,7 @@
 
 // Standard C++ headers
 #include <cmath>
+#include <cassert>
 
 // Local headers
 #include "temperatureController.h"
@@ -112,16 +113,16 @@ void TemperatureController::Reset(void)
 //==========================================================================
 void TemperatureController::Update(void)
 {
-	if (!enabled)
-		return;
-
 	if (!sensor->GetTemperature(actualTemperature))
 		sensorOK = true;
 	else
 	{
 		sensorOK = false;
-		return;// TODO:  Generate error?
+		return;
 	}
+
+	if (!enabled)
+		return;
 
 	commandedTemperature += rate * timeStep;
 	if (commandedTemperature > plateauTemperature)
@@ -238,4 +239,27 @@ double TemperatureController::GetPWMDuty(void) const
 bool TemperatureController::OutputIsSaturated(void) const
 {
 	return pwmOut->GetDutyCycle() == 1.0;
+}
+
+//==========================================================================
+// Class:			TemperatureController
+// Function:		DirectlySetPWMDuty
+//
+// Description:		Bypasses the controller and sets the PWM duty cycle.
+//
+// Input Arguments:
+//		duty	= double
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void TemperatureController::DirectlySetPWMDuty(double duty)
+{
+	assert(duty >= 0.0 && duty <= 1.0);
+
+	pwmOut->SetDutyCycle(duty);
 }

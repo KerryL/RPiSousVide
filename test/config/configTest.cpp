@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 	cout << "Controller Configuration" << endl;
 	cout << "  Proportional Gain = " << config.controller.kp << " %/deg F" << endl;
 	cout << "  Integral Time Constant = " << config.controller.ti << " sec" << endl;
-	cout << "  Derivative Gain = " << config.controller.kd << " %-sec/deg F" << endl;
+	cout << "  Derivative Gain = " << config.controller.kd << " sec" << endl;
 	cout << "  Feed Forward Gain = " << config.controller.kf << " %-sec/deg F" << endl;
 	cout << "  Derivative Filter Time Constant = " << config.controller.td << " sec" << endl;
 	cout << "  FF Filter Time Constant = " << config.controller.tf << " sec" << endl;

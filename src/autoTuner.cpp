@@ -253,21 +253,18 @@ bool AutoTuner::ComputeC2(const std::vector<double> &time, const std::vector<dou
 void AutoTuner::ComputeAmbientTemperature(const std::vector<double> &time,
 		const std::vector<double> &temperature, unsigned int segments)
 {
+	assert(time.size() == temperature.size());
+	assert(time.size() > segments);
+
 	double total(0.0), rate;
 	unsigned int i, startIndex(0), endIndex;
-outStream << "size = " << temperature[0] << std::endl;
 
 	for (i = 0; i < segments; i++)
 	{
-		endIndex = floor((double)time.size() * (i + 1.0) / (double)segments);
+		endIndex = (unsigned int)floor((time.size() - 1.0) * (i + 1.0) / (double)segments);
 		rate = (temperature[endIndex] - temperature[startIndex]) /
 			(time[endIndex] - time[startIndex]);
-		outStream << "Rate: " << rate << std::endl;
 		total += (rate - c2) / c1 + temperature[startIndex];
-		outStream << "estimate = " << (rate - c2) / c1 + temperature[startIndex] << std::endl;
-		outStream << startIndex << " to " << endIndex << std::endl;
-		outStream << temperature[startIndex] << ", " <<
-			temperature[endIndex] << std::endl;
 		startIndex = endIndex;
 	}
 
@@ -464,7 +461,7 @@ bool AutoTuner::MembersAreValid(void) const
 //
 //==========================================================================
 bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
-	const std::vector<double> &control, std::vector<double> &temperature)
+	const std::vector<double> &control, std::vector<double> &temperature) const
 {
 	return GetSimulatedOpenLoopResponse(time, control, temperature,
 		ambientTemperature, ambientTemperature);
@@ -493,7 +490,7 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 //==========================================================================
 bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 	const std::vector<double> &control, std::vector<double> &temperature,
-	double initialTemperature)
+	double initialTemperature) const
 {
 	return GetSimulatedOpenLoopResponse(time, control, temperature,
 		initialTemperature, ambientTemperature);
@@ -521,16 +518,18 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 //==========================================================================
 bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 	const std::vector<double> &control, std::vector<double> &temperature,
-	double initialTemperature, double ambientTemperature)
+	double initialTemperature, double ambientTemperature) const
 {
 	if (!MembersAreValid())
 		return false;
 
 	temperature.clear();
-	temperature.push_back(initialTemperature);
 
-	// NOTE:  The integrator we use here is just the forward Euler method -
-	//        chosen because it's easy to implement, not because it's accurate!
+	// Create the first data point
+	// We don't just push the initial temeprature, in case the time series we're
+	// using doesn't start at zero
+	temperature.push_back(GetSimulatedOpenLoopResponse(time[0], control[0],
+		initialTemperature, ambientTemperature));
 
 	unsigned int i;
 	for (i = 1; i < time.size(); i++)
@@ -552,7 +551,7 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 // Input Arguments:
 //		deltaT				= double [sec]
 //		control				= double [%] (must be clamped to 0..1)
-//		initialTemperature	= double [deg F]
+//		tankTemperature		= double [deg F] at beginning of time step
 //		ambientTemperature	= double [deg F]
 //
 // Output Arguments:
@@ -563,11 +562,65 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 //
 //==========================================================================
 double AutoTuner::GetSimulatedOpenLoopResponse(double deltaT, double control,
-	double initialTemperature, double ambientTemperature)
+	double tankTemperature, double ambientTemperature) const
+{
+	// NOTE:  The integrator we use here is just the forward Euler method -
+	//        chosen because it's easy to implement, not because it's accurate!
+	//        In using AB3 and RK4, though, the results are very similar (possibly
+	//        due to relativly high system inertia and constant control input?).
+
+	// TODO:  This could be cleaned up, maybe provide an integrator option?
+	// Any integrator with options should probably be it's own class...
+	/*double nextTemperature;
+	const unsigned int integrator(0);
+	if (integrator == 0)// Forward Euler
+		nextTemperature =*/return tankTemperature + deltaT * PredictRateOfChange(control, tankTemperature, ambientTemperature);
+	/*else if (integrator == 1)// Adams-Bashforth 3rd order
+	{
+		double rate = PredictRateOfChange(control, tankTemperature, ambientTemperature);
+		nextTemperature = tankTemperature + deltaT * (23.0 / 12.0 * rate - 4.0 / 3.0 * lastRate + 5.0 / 12.0 * lastLastRate);
+		lastLastRate = lastRate;
+		lastRate = rate;
+	}
+	else if (integrator == 2)// Runge-Kutta 4th order
+	{
+		// TODO:  Really, control should be interpolated, too (not an issues as we're currently using it, since control is constant...)
+		double k1, k2, k3, k4;
+		k1 = PredictRateOfChange(control, tankTemperature, ambientTemperature);
+		k2 = PredictRateOfChange(control, tankTemperature + deltaT * 0.5 * k1, ambientTemperature);
+		k3 = PredictRateOfChange(control, tankTemperature + deltaT * 0.5 * k2, ambientTemperature);
+		k4 = PredictRateOfChange(control, tankTemperature + deltaT * k3, ambientTemperature);
+		nextTemperature = tankTemperature + 1.0 / 6.0 * deltaT * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
+	}
+	else
+		assert(false);
+
+	return nextTemperature;*/
+}
+
+//==========================================================================
+// Class:			AutoTuner
+// Function:		PredictRateOfChange
+//
+// Description:		Generates the next expected temperature point.
+//
+//
+// Input Arguments:
+//		deltaT				= double [sec]
+//		control				= double [%] (must be clamped to 0..1)
+//		initialTemperature	= double [deg F]
+//		ambientTemperature	= double [deg F]
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		double, next temperature value [deg F]
+//
+//==========================================================================
+double AutoTuner::PredictRateOfChange(double control, double tankTemperature,
+		double ambientTemperature) const
 {
 	assert(control >= 0.0 && control <= 1.0);
-
-	double dTdt = c1 * (ambientTemperature - initialTemperature) + c2 * control;
-
-	return initialTemperature + dTdt * deltaT;
+	return c1 * (ambientTemperature - tankTemperature) + c2 * control;
 }

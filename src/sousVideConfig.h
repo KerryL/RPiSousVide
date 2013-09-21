@@ -29,7 +29,7 @@ struct ControllerConfiguration
 	// Gains
 	double kp;// [%/deg F]
 	double ti;// [sec]
-	double kd;// [%-sec/deg F]
+	double kd;// [sec]
 	double kf;// [%-sec/deg F]
 
 	// Derivative time constants
