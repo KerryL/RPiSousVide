@@ -9,7 +9,8 @@ TESTDIRS = \
 	logger \
 	config \
 	derivativeFilter \
-	autoTuner
+	autoTuner \
+	json
 
 .PHONY: all clean
 

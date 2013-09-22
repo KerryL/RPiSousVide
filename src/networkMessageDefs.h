@@ -8,9 +8,27 @@
 #ifndef NETWORK_MESSAGE_DEFS_H_
 #define NETWORK_MESSAGE_DEFS_H_
 
+// Standard C++ headers
+#include <string>
+
 // Local headers
 #include "sousVide.h"
 
+struct JSONKeys
+{
+	static const std::string CommandKey;
+	static const std::string PlateauTemperatureKey;
+	static const std::string SoakTimeKey;
+
+	static const std::string StateKey;
+	static const std::string CommandedTemperatureKey;
+	static const std::string ActualTemperatureKey;
+};
+
+// TODO:  Need to add enums for command and state?
+
+// Structures for passing in and out of network interface
+// (we're keeping the JSON stuff all within NetworkInterface)
 struct FrontToBackMessage
 {
 	SousVide::Command command;

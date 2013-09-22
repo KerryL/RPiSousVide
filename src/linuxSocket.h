@@ -58,8 +58,9 @@ public:
 
 	static const int SOCKET_ERROR = -1;
 
-private:
 	static const unsigned int maxMessageSize;
+
+private:
 	static const unsigned int maxConnections;
 	static const unsigned int selectTimeout;// [sec]
 

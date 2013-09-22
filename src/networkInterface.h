@@ -7,6 +7,12 @@
 #ifndef NETWORK_INTERFACE_H_
 #define NETWORK_INTERFACE_H_
 
+// Standard C++ headers
+#include <string>
+
+// cJSON forward declarations
+struct cJSON;
+
 // Local forward declarations
 struct NetworkConfiguration;
 struct FrontToBackMessage;
@@ -26,6 +32,16 @@ public:
 
 private:
 	LinuxSocket *socket;
+	char *buffer;
+
+	static bool DecodeMessage(const std::string &buffer,
+		FrontToBackMessage &message);
+	static bool EncodeMessage(const BackToFrontMessage &message,
+		std::string &buffer);
+
+	static bool ReadJSON(cJSON *parent, std::string key, double &value);
+	static bool ReadJSON(cJSON *parent, std::string key, int &value);
+	static bool ReadJSON(cJSON *parent, std::string key, std::string &value);
 };
 
-#endif// NETWORK_MESSAGE_DEFS_H_
+#endif// NETWORK_INTERFACE_H_
