@@ -1,0 +1,74 @@
+
+Measured periods for different values of pwmSetClock() argument:
+Using default divisor (not calling pwmSetClock), 3.5 usec
+
+Data in balanced PWM mode, 0.5 duty cycle
+
+Argument  Period      Freq
+--------------------------
+With range at default 1024:
+-         3.5 usec    285.7 kHz
+1         440 usec    2.272 kHz
+2         too fast to measure
+3         too fast to measure
+20        2 usec      500 kHz
+200       20 usec     50 kHz
+2000      200 usec    5 kHz
+3000      320 usec    3.125 kHz
+4000      420 usec    2.381 kHz
+4075      420 usec    2.381 kHz
+4085      420 usec    2.381 kHz
+4100      too fast to measure
+4125      4 usec      250 kHz
+4250      16 usec     62.5 kHz
+4500      42 usec     23.81 kHz
+5000      95 usec     10.53 kHz
+20000     360 usec    2.778 kHz
+
+With range at 2048:
+4000      850 usec    1.176 kHz
+
+With range at 4096:
+4000      1.65 msec   606.1 Hz
+4000      420 usec
+4050      420 usec
+4025      280 usec
+4050      280 usec    
+4096      too slow?  not working?
+
+With range at 8192, 6000, and 5000:
+4000      420 usec    2.381 kHz
+(it appears that 4096 is the max allowable range)
+
+
+
+
+OK: throw out all above data - freq is apparently dependent on duty cycle, which cannot be the case.  In mark-space mode, it is much easier to make sense of everything.  I need to do some reading.
+
+Mark-space data:
+Clock   Range    Period      Freq
+---------------------------------
+1       1024     215 msec    4.65 Hz
+2       1024     106 usec    9.43 kHz
+200     1024     10.6 msec   94.3 Hz
+200     2048     21 msec     47.6 Hz
+200     4096     43 msec     12.0 Hz
+400     1024     21.5 msec   46.5 Hz
+400     2048     43 msec     23.2 Hz
+2000    4096     440 msec    2.27 Hz
+4000    2048     440 msec    2.27 Hz
+4000    4096     860 msec    1.16 Hz
+4095    4096     880 msec    1.14 Hz
+4096    4096     signal always low
+
+
+
+In balanced mode:
+Clock   Range  Duty  Period
+---------------------------
+2       1024
+4095    4096   0.8   1.1 msec third picture
+4095    4096   0.6   first picture (1.1 msec)
+4095    4096   0.5   0.4 msec fifth picture
+4095    4096   0.4   second picture (1.1 msec)
+4095    4096   0.2   1.1 msec fourth picture

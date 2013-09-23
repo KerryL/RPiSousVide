@@ -18,6 +18,8 @@
 #include "gpio.h"
 #include "pwmOutput.h"
 
+using namespace std;
+
 // Entry point
 int main(int argc, char *argv[])
 {
@@ -32,6 +34,14 @@ int main(int argc, char *argv[])
 	GPIO outPin(2, GPIO::DirectionOutput);
 	PWMOutput pwmPin(1);
 	inPin.SetPullUpDown(GPIO::PullUp);
+
+	pwmPin.SetMode(PWMOutput::ModeMarkSpace);
+//	pwmPin.SetRange(4096);// Eventually, we shouldn't have to make this call
+	if (!pwmPin.SetFrequency(5000))
+	{
+		cout << "Failed to set frequency" << endl;
+		return 1;
+	}
 	
 	while (true)
 	{

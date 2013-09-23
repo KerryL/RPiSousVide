@@ -23,13 +23,16 @@ public:
 
 	void SetDutyCycle(double duty);
 	void SetMode(PWMMode mode);
+	void SetRange(unsigned int range);
+	bool SetFrequency(unsigned int frequency, unsigned int minResolution = 100);
 
-	double GetDutyCycle(void) const { return duty; }
+	double GetDutyCycle(void) const { return duty; };
 
 private:
 	double frequency;// [Hz]
 	double duty;// [%]
-	const unsigned int range;
+	unsigned int range;
+	PWMMode mode;
 };
 
 #endif// PWM_OUTPUT_H_

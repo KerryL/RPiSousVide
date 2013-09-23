@@ -39,6 +39,9 @@ TemperatureController::TemperatureController(double timeStep,
 	: PIDController(timeStep, configuration.kp, configuration.ti, configuration.kd,
 	configuration.kf, configuration.td, configuration.tf), sensor(sensor), pwmOut(pwmOut)
 {
+	// TODO:  Check return value of SetFrequency()?
+	pwmOut->SetFrequency(2.0);// [Hz] TODO:  Should this be hardcoded?
+
 	SetOutputClamp(0.0, 1.0);
 	SetOutputEnable(false);
 	sensorOK = false;

@@ -213,6 +213,7 @@ bool NetworkInterface::EncodeMessage(const BackToFrontMessage &message,
 	cJSON_AddNumberToObject(root, JSONKeys::StateKey.c_str(), (int)message.state);// TODO:  Use the string describing the state instead?
 	cJSON_AddNumberToObject(root, JSONKeys::CommandedTemperatureKey.c_str(), message.commandedTemperature);
 	cJSON_AddNumberToObject(root, JSONKeys::ActualTemperatureKey.c_str(), message.actualTemperature);
+	// TODO:  Tell front end when to enable/disable buttons?
 
 	buffer.assign(cJSON_Print(root));
 	cJSON_Delete(root);
