@@ -102,7 +102,7 @@ private:
 	void ProcessState(void);
 	void ExitState(void);
 
-	std::string GetStateName(void);
+	std::string GetStateName(void) const;
 
 	bool InterlocksOK(void);
 	bool SaturationTimeExceeded(void);

@@ -178,11 +178,14 @@ bool NetworkInterface::DecodeMessage(const std::string &buffer,
 		return false;
 	message.command = (SousVide::Command)command;
 
-	if (!ReadJSON(root, JSONKeys::PlateauTemperatureKey, message.plateauTemperature))
-		return false;
+	if (message.command == SousVide::CmdStart)
+	{
+		if (!ReadJSON(root, JSONKeys::PlateauTemperatureKey, message.plateauTemperature))
+			return false;
 
-	if (!ReadJSON(root, JSONKeys::SoakTimeKey, message.soakTime))
-		return false;
+		if (!ReadJSON(root, JSONKeys::SoakTimeKey, message.soakTime))
+			return false;
+	}
 
 	cJSON_Delete(root);
 
@@ -210,7 +213,7 @@ bool NetworkInterface::EncodeMessage(const BackToFrontMessage &message,
 	std::string &buffer)
 {
 	cJSON *root = cJSON_CreateObject();
-	cJSON_AddNumberToObject(root, JSONKeys::StateKey.c_str(), (int)message.state);// TODO:  Use the string describing the state instead?
+	cJSON_AddStringToObject(root, JSONKeys::StateKey.c_str(), message.state.c_str());
 	cJSON_AddNumberToObject(root, JSONKeys::CommandedTemperatureKey.c_str(), message.commandedTemperature);
 	cJSON_AddNumberToObject(root, JSONKeys::ActualTemperatureKey.c_str(), message.actualTemperature);
 	// TODO:  Tell front end when to enable/disable buttons?

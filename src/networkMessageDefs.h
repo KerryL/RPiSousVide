@@ -25,13 +25,11 @@ struct JSONKeys
 	static const std::string ActualTemperatureKey;
 };
 
-// TODO:  Need to add enums for command and state?
-
 // Structures for passing in and out of network interface
 // (we're keeping the JSON stuff all within NetworkInterface)
 struct FrontToBackMessage
 {
-	SousVide::Command command;
+	SousVide::Command command;// See sousVide.h
 
 	double plateauTemperature;// [deg F]
 	double soakTime;// [sec]
@@ -39,7 +37,7 @@ struct FrontToBackMessage
 
 struct BackToFrontMessage
 {
-	SousVide::State state;// see sousVide.h
+	std::string state;
 
 	double commandedTemperature;// [deg F]
 	double actualTemperature;// [deg F]

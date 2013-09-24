@@ -227,8 +227,6 @@ void SousVide::Run()
 		{
 			ProcessMessage(receivedMessage);
 			sendClientMessage = true;
-			// TODO:  Determine when to send client messages -> could be any
-			// time we get a message from the client, or on a timer, etc.
 		}
 		UpdateState();
 		if (sendClientMessage)
@@ -505,6 +503,8 @@ void SousVide::EnterState(void)
 {
 	assert(state >= 0 && state < StateCount);
 	stateStartTime = time(NULL);
+
+	sendClientMessage = true;
 
 	CombinedLogger::GetLogger() << "Entering State " << GetStateName() << std::endl;
 
@@ -800,7 +800,7 @@ void SousVide::ExitState(void)
 //		std::string
 //
 //==========================================================================
-std::string SousVide::GetStateName(void)
+std::string SousVide::GetStateName(void) const
 {
 	assert(state >= 0 && state < StateCount);
 
@@ -959,7 +959,7 @@ void SousVide::ProcessMessage(const FrontToBackMessage &receivedMessage)
 BackToFrontMessage SousVide::AssembleMessage(void) const
 {
 	BackToFrontMessage message;
-	message.state = state;
+	message.state = GetStateName();
 	message.commandedTemperature = controller->GetCommandedTemperature();
 	message.actualTemperature = controller->GetActualTemperature();
 
