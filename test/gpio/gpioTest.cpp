@@ -36,8 +36,7 @@ int main(int argc, char *argv[])
 	inPin.SetPullUpDown(GPIO::PullUp);
 
 	pwmPin.SetMode(PWMOutput::ModeMarkSpace);
-//	pwmPin.SetRange(4096);// Eventually, we shouldn't have to make this call
-	if (!pwmPin.SetFrequency(5000))
+	if (!pwmPin.SetFrequency(5000.0))
 	{
 		cout << "Failed to set frequency" << endl;
 		return 1;

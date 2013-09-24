@@ -26,6 +26,8 @@ public:
 	void Update(void);
 	void SetOutputEnable(bool enabled = true);
 
+	void UpdateConfiguration(ControllerConfiguration configuration);
+
 	void SetRateLimit(double rate);
 	void SetPlateauTemperature(double temperature);
 	void DirectlySetPWMDuty(double duty);
@@ -33,6 +35,7 @@ public:
 	double GetActualTemperature(void) const { return actualTemperature; };
 	double GetCommandedTemperature(void) const { return commandedTemperature; };
 	bool TemperatureSensorOK(void) const { return sensorOK; };
+	bool PWMOutputOK(void) const { return pwmOK; };
 
 	double GetPWMDuty(void) const;
 	bool OutputIsSaturated(void) const;
@@ -42,7 +45,7 @@ private:
 	PWMOutput* const pwmOut;
 
 	bool enabled;
-	bool sensorOK;
+	bool sensorOK, pwmOK;
 
 	double rate;// [deg F/sec]
 	double plateauTemperature;// [deg F]

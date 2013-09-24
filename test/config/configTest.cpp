@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
 	cout << "  Derivative Filter Time Constant = " << config.controller.td << " sec" << endl;
 	cout << "  FF Filter Time Constant = " << config.controller.tf << " sec" << endl;
 	cout << "  Plateau Tolerance = " << config.controller.plateauTolerance << " deg F" << endl;
+	cout << "  PWM Frequency = " << config.controller.pwmFrequency << " Hz" << endl;
 
 	cout << endl;
 	cout << "System Configuration" << endl;

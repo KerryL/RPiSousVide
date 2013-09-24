@@ -42,6 +42,7 @@ const std::string SousVideConfig::ConfigFields::ControllerKfKey						= "kf";
 const std::string SousVideConfig::ConfigFields::ControllerTdKey						= "td";
 const std::string SousVideConfig::ConfigFields::ControllerTfKey						= "tf";
 const std::string SousVideConfig::ConfigFields::ControllerPlateauToleranceKey		= "plateauTolerance";
+const std::string SousVideConfig::ConfigFields::ControllerPWMFrequencyKey			= "pwmFrequency";
 
 const std::string SousVideConfig::ConfigFields::InterlockMaxSaturationTimeKey		= "maxSaturationTime";
 const std::string SousVideConfig::ConfigFields::InterlockMaxTemperatureKey			= "maxTemperature";
@@ -94,6 +95,8 @@ SousVideConfig::SousVideConfig(std::ostream &outStream) : outStream(outStream)
 //==========================================================================
 bool SousVideConfig::ReadConfiguration(std::string fileName)
 {
+	outStream << "Reading configuration from '" << fileName << "'" << std::endl;
+
 	std::ifstream file(fileName.c_str(), std::ios::in);
 	if (!file.is_open() || !file.good())
 	{
@@ -161,6 +164,7 @@ void SousVideConfig::AssignDefaults(void)
 	controller.td = 1.0;
 	controller.tf = 1.0;
 	controller.plateauTolerance = 1.0;// [deg F]
+	controller.pwmFrequency = 2.0;// [Hz]
 
 	system.interlock.maxSaturationTime = 10.0;// [sec]
 	system.interlock.maxTemperature = 200.0;// [deg F]
@@ -350,6 +354,21 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 	if (controller.plateauTolerance <= 0.0)
 	{
 		outStream << "Controller:  " << ConfigFields::ControllerPlateauToleranceKey << " must be strictly positive" << std::endl;
+		ok = false;
+	}
+
+	// The hard-coded limits here can be explained by looking at the PWMOutput class.
+	// The limitations are inherent to Raspberry PI hardware PWM.
+	const double pwmMinFrequency(1.14);// [Hz]
+	const double pwmMaxFrequency(96000.0);// [Hz]
+	if (controller.pwmFrequency < pwmMinFrequency)
+	{
+		outStream << "Controller:  " << ConfigFields::ControllerPWMFrequencyKey << " must be greater than " << pwmMinFrequency << " Hz" << std::endl;
+		ok = false;
+	}
+	else if (controller.pwmFrequency > pwmMaxFrequency)
+	{
+		outStream << "Controller:  " << ConfigFields::ControllerPWMFrequencyKey << " must be less than " << pwmMaxFrequency << " Hz" << std::endl;
 		ok = false;
 	}
 
@@ -561,6 +580,8 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		controller.tf = atof(data.c_str());
 	else if (field.compare(ConfigFields::ControllerPlateauToleranceKey) == 0)
 		controller.plateauTolerance = atof(data.c_str());
+	else if (field.compare(ConfigFields::ControllerPWMFrequencyKey) == 0)
+		controller.pwmFrequency = atof(data.c_str());
 	else if (field.compare(ConfigFields::InterlockMaxSaturationTimeKey) == 0)
 		system.interlock.maxSaturationTime = atof(data.c_str());
 	else if (field.compare(ConfigFields::InterlockMaxTemperatureKey) == 0)

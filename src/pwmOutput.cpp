@@ -16,6 +16,27 @@
 
 //==========================================================================
 // Class:			PWMOutput
+// Function:		Constant definitions
+//
+// Description:		Constant definitions for PWMOutput class.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+const double PWMOutput::pwmClockFrequency = 19.2e6;// [Hz]
+const unsigned int PWMOutput::minClockDivisor = 2;
+const unsigned int PWMOutput::maxClockDivisor = 4095;
+const unsigned int PWMOutput::maxRange = 4096;
+
+//==========================================================================
+// Class:			PWMOutput
 // Function:		PWMOutput
 //
 // Description:		Constructor for PWMOutput class.
@@ -108,6 +129,8 @@ void PWMOutput::SetMode(PWMMode mode)
 //==========================================================================
 void PWMOutput::SetRange(unsigned int range)
 {
+	assert(range <= maxRange);
+
 	pwmSetRange(range);
 	this->range = range;
 	SetDutyCycle(duty);
@@ -124,40 +147,102 @@ void PWMOutput::SetRange(unsigned int range)
 //					If the frequency cannot be achieved with the current
 //					range, this function returns false.
 //
+//					This method seems to work pretty well, but I have no proof
+//					suggesting that it will always generate the best pair or
+//					range-clock divisor values.  That criteria is somewhat
+//					dependent on your valuationg of resolution vs. frequency
+//					accuracy anyway.
+//
 // Input Arguments:
-//		frequency		= unsigned int [Hz]
+//		frequency		= double [Hz]
 //		minResolution	= unsigned int
 //
 // Output Arguments:
 //		None
 //
 // Return Value:
-//		bool, true if successfully set, false otherwise
+//		bool, true if successfully set, false otherwise (frequency out of
+//		bounds or wrong PWM mode)
 //
 //==========================================================================
-bool PWMOutput::SetFrequency(unsigned int frequency, unsigned int minResolution)
+bool PWMOutput::SetFrequency(double frequency, unsigned int minResolution)
 {
-	int clock;
-	double period(1000.0 / frequency);// [msec]
+	unsigned int newRange, divisor;
 
 	if (mode == ModeMarkSpace)
 	{
-		// This equation is based on empirical data taken with an old,
-		// uncalibrated oscilloscope.  It's probably close, but I'd feel
-		// better if we got some numbers from a datasheet.
-		clock = (int)floor((period / range + 2.47264e-5) / 5.2946815e-5);
+		const unsigned int rangeDivisorProduct = floor(pwmClockFrequency / frequency + 0.5);
+		divisor = 1;
 
-		// TODO:  Adjust the range to achieve as close a match as possible
-		// Really, it's not "as close a match as possible" but some
-		// function we want to minimize taking into account resolution
-		// (more is better) and error (less is better)
+		// Make sure the frequency is within the range we can attempt
+		if (rangeDivisorProduct / minResolution < minClockDivisor ||// Frequency too high
+			rangeDivisorProduct / maxClockDivisor > maxRange)// Frequency too low
+			return false;
+
+		unsigned int i(1);
+		while (divisor < 2 || newRange > maxRange ||
+			divisor > maxClockDivisor || newRange < minResolution)
+		{
+			// If we've tried all combinations, we're done
+			if (i >= 2 * rangeDivisorProduct)
+				return false;
+
+			if (i % 2 == 0)
+				divisor = GetMinimumAcceptableFactor(rangeDivisorProduct + floor(i / 2.0));
+			else
+				divisor = GetMinimumAcceptableFactor(rangeDivisorProduct - floor(i / 2.0));
+			i++;
+
+			newRange = floor(rangeDivisorProduct / divisor + 0.5);
+		}
 	}
 	else
-		assert(false);// TODO:  Implement
-
-	if (clock < 2 || clock > 4095)
+	{
+		// See page 139 of the Broadcom ARM documentation.  The default PWM mode
+		// (balanced) DOES in fact change the apparent frequency as a function of
+		// duty cycle.  Their goal is to achieve as even a distribution of on/off
+		// pulses as possible within any arbitrary block of time (i.e. when the
+		// arbitrary time slice is not an integer multiple of the PWM period).
+		// For this reason, we won't attempt to implement SetFrequency for balanced
+		// PWM mode (although it does have an affect on the PWM output).
+		// http://www.element14.com/community/servlet/JiveServlet/downloadBody/43016-102-1-231518/Broadcom.Datasheet.pdf
+		//assert(false);
 		return false;
+	}
 
-	pwmSetClock(clock);
+	assert(divisor >= minClockDivisor &&
+		divisor <= maxClockDivisor &&
+		newRange >= minResolution);
+
+	pwmSetClock(divisor);
+	SetRange(newRange);
+
 	return true;
+}
+
+//==========================================================================
+// Class:			PWMOutput
+// Function:		GetMinimumAcceptableFactor
+//
+// Description:		Returns the smallest prime factor of the argument.
+//
+// Input Arguments:
+//		i	= unsigned int
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		unsigned int
+//
+//==========================================================================
+unsigned int PWMOutput::GetMinimumAcceptableFactor(unsigned int i) const
+{
+	// We're going to use a naieve approach with special stop condition
+	// TODO:  Improve the speed here (may or may not be acceptable for large values of i)
+
+	unsigned int f(1);
+	while (f++, (i % f != 0 || i / f > maxRange) && f <= maxClockDivisor) {}
+
+	return f;
 }

@@ -39,8 +39,8 @@ TemperatureController::TemperatureController(double timeStep,
 	: PIDController(timeStep, configuration.kp, configuration.ti, configuration.kd,
 	configuration.kf, configuration.td, configuration.tf), sensor(sensor), pwmOut(pwmOut)
 {
-	// TODO:  Check return value of SetFrequency()?
-	pwmOut->SetFrequency(2.0);// [Hz] TODO:  Should this be hardcoded?
+	pwmOut->SetMode(PWMOutput::ModeMarkSpace);
+	UpdateConfiguration(configuration);
 
 	SetOutputClamp(0.0, 1.0);
 	SetOutputEnable(false);
@@ -67,6 +67,33 @@ TemperatureController::~TemperatureController()
 {
 	delete sensor;
 	delete pwmOut;
+}
+
+//==========================================================================
+// Class:			TemperatureController
+// Function:		UpdateConfiguration
+//
+// Description:		Updates any configuration options that may have changed.
+//
+// Input Arguments:
+//		configuration	= ControllerConfiguration
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void TemperatureController::UpdateConfiguration(ControllerConfiguration configuration)
+{
+	pwmOK = pwmOut->SetFrequency(configuration.pwmFrequency);
+	SetKp(configuration.kp);
+	SetTi(configuration.ti);
+	SetKd(configuration.ti);
+	SetKf(configuration.kf);
+	SetTd(configuration.td);
+	SetTf(configuration.tf);
 }
 
 //==========================================================================

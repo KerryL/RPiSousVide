@@ -25,6 +25,7 @@ kp = 1# [%/deg F]
 #td = 1# [sec]
 #tf = 1# [sec]
 #plateauTolerance = 1# [deg F]
+#pwmFrequency = 2.0# [Hz]
 
 # Interlock configuration
 #maxSaturationTime = 10# [sec]

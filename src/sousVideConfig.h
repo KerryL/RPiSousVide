@@ -37,6 +37,7 @@ struct ControllerConfiguration
 	double tf;// [sec]
 
 	double plateauTolerance;// [deg F]
+	double pwmFrequency;// [Hz]
 };
 
 struct InterlockConfiguration
@@ -104,6 +105,7 @@ private:
 		static const std::string ControllerTdKey;
 		static const std::string ControllerTfKey;
 		static const std::string ControllerPlateauToleranceKey;
+		static const std::string ControllerPWMFrequencyKey;
 
 		static const std::string InterlockMaxSaturationTimeKey;
 		static const std::string InterlockMaxTemperatureKey;

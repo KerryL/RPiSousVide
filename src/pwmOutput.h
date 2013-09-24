@@ -24,15 +24,19 @@ public:
 	void SetDutyCycle(double duty);
 	void SetMode(PWMMode mode);
 	void SetRange(unsigned int range);
-	bool SetFrequency(unsigned int frequency, unsigned int minResolution = 100);
+	bool SetFrequency(double frequency, unsigned int minResolution = 100);
 
 	double GetDutyCycle(void) const { return duty; };
 
 private:
+	static const double pwmClockFrequency;// [Hz]
+	static const unsigned int minClockDivisor, maxClockDivisor, maxRange;
 	double frequency;// [Hz]
 	double duty;// [%]
 	unsigned int range;
 	PWMMode mode;
+
+	unsigned int GetMinimumAcceptableFactor(unsigned int i) const;
 };
 
 #endif// PWM_OUTPUT_H_

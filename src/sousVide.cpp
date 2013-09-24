@@ -134,6 +134,12 @@ SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger())
 	controller->SetRateLimit(configuration.system.maxHeatingRate);
 	pumpRelay = new GPIO(configuration.io.pumpRelayPin, GPIO::DirectionOutput);
 
+	if (!controller->PWMOutputOK())
+	{
+		CombinedLogger::GetLogger() << "PWM Frequency is out-of-range.  Exiting..." << std::endl;
+		exit(1);
+	}
+
 	thLog = NULL;
 	thLogFile = NULL;
 
@@ -507,13 +513,27 @@ void SousVide::EnterState(void)
 	}
 	else if (state == StateInitializing)
 	{
-		if (!ReadConfiguration())
+		if (ReadConfiguration())
+		{
+			// TODO:  Warn user about setting that don't immediately take effect
+			/*if (configuration.network.port != )
+				CombinedLogger::GetLogger() << "Network port number change will take effect next time the application is started" << std::endl;
+			if (configuration.io.pumpPin != ||
+				configuration.io.heaterPin != ||
+				configuration.io.sensorID != )
+				CombinedLogger::GetLogger() << "I/O configuration changes will take effect next time the application is started" << std::endl;*/
+
+			controller->UpdateConfiguration(configuration.controller);
+			// Everything else is read directly from the configuration
+			// object each time it is used, so no updating is necessary
+		}
+		else
 		{
 			CombinedLogger::GetLogger() << "Failed to re-load configuration" << std::endl;
+			// TODO:  Reply to clients to let them know about some invalid value?
 			nextState = StateError;
 		}
-			
-		// NOTE:  Network or GPIO-related config file changes will require restart
+
 		timeStep = 1.0 / configuration.system.idleFrequency;
 	}
 	else if (state == StateReady)
