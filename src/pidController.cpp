@@ -124,7 +124,7 @@ void PIDController::SetTi(double ti)
 //		None
 //
 //==========================================================================
-void PIDController::SetKd(double ti)
+void PIDController::SetKd(double kd)
 {
 	this->kd = fabs(kd);
 }
@@ -145,7 +145,7 @@ void PIDController::SetKd(double ti)
 //		None
 //
 //==========================================================================
-void PIDController::SetKf(double ff)
+void PIDController::SetKf(double kf)
 {
 	this->kf = fabs(kf);
 }

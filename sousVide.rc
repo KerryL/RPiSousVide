@@ -34,8 +34,8 @@ kp = 1# [%/deg F]
 #minErrorTime = 5# [sec]
 
 # System configuration
-#idleFrequency = 1# [Hz]
-#activeFrequency = 10# [Hz]
+#idleFrequency = 0.2# [Hz]
+#activeFrequency = 1# [Hz]
 #pwmFrequency = 10# [Hz]
 #statisticsTime = 10# [sec] (0 == OFF)
 maxHeatingRate = 1# [deg F/sec]

@@ -76,6 +76,6 @@ TimeHistoryLog& operator<<(TimeHistoryLog& log, T const& value)
 	static_cast<std::ostream&>(log) << log.delimiter << value;
 
 	return log;
-};
+}
 
 #endif// TIME_HISTORY_LOG_H_

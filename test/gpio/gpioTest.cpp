@@ -21,7 +21,7 @@
 using namespace std;
 
 // Entry point
-int main(int argc, char *argv[])
+int main(int, char *[])
 {
 	clock_t start, stop;
 	double elapsed;

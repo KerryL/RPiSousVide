@@ -171,8 +171,8 @@ void SousVideConfig::AssignDefaults(void)
 	system.interlock.temperatureTolerance = 2.0;// [deg F]
 	system.interlock.minErrorTime = 5.0;// [sec]
 
-	system.idleFrequency = 1.0;// [Hz]
-	system.activeFrequency = 10.0;// [Hz]
+	system.idleFrequency = 0.2;// [Hz]
+	system.activeFrequency = 1.0;// [Hz]
 	system.statisticsTime = 10.0;// [sec]
 	system.maxHeatingRate = -1.0;// [deg F/sec] invalid -> must be specified by user
 	system.maxAutoTuneTime = 30.0 * 60.0;// [sec]

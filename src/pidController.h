@@ -21,7 +21,7 @@ public:
 
 	void SetKp(double kp);
 	void SetTi(double ti);
-	void SetKd(double ti);
+	void SetKd(double kd);
 	void SetKf(double kf);
 	void SetTd(double td);
 	void SetTf(double tf);

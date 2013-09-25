@@ -7,7 +7,6 @@
 // Comment out the next line to test UDP sockets
 #define TEST_TCP
 
-
 // Standard C++ headers
 #include <iostream>
 #include <cstdlib>

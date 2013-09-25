@@ -15,7 +15,7 @@
 using namespace std;
 
 // Application entry point
-int main(int argc, char *argv[])
+int main(int, char *[])
 {
 	const std::string testOutput("filterTest.csv");
 	cout << "Writing test data to " << testOutput << endl;

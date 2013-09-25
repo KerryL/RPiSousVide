@@ -1,4 +1,4 @@
-# makefile.inc (RPiSousVide JSON Test)
+# makefile.inc (RPiSousVide Temp Sensor Test)
 # This file contains all of the environment definitions
 # common to each of the makefiles within the project. 
 #
@@ -38,7 +38,6 @@ PSLIB = \
 
 # Compiler to use
 CC = arm-unknown-linux-gnueabi-g++
-#CC = g++
 
 # Archiver to use
 AR = arm-unknown-linux-gnueabi-ar rcs

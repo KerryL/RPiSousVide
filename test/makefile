@@ -10,7 +10,9 @@ TESTDIRS = \
 	config \
 	derivativeFilter \
 	autoTuner \
-	json
+	json \
+	tempSensor \
+	gnuPlot
 
 .PHONY: all clean
 

@@ -15,7 +15,7 @@
 using namespace std;
 
 // Application entry point
-int main(int argc, char *argv[])
+int main(int, char *[])
 {
 	// Encode some data
 	double value1(203.3), value2(-29.21);

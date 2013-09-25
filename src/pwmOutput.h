@@ -27,6 +27,7 @@ public:
 	bool SetFrequency(double frequency, unsigned int minResolution = 100);
 
 	double GetDutyCycle(void) const { return duty; };
+	double GetFrequency(void) const { return frequency; };
 
 private:
 	static const double pwmClockFrequency;// [Hz]

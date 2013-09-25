@@ -1,6 +1,8 @@
 Raspbery Pi Sous Vide Controller
 
-NOTE:  This project includes cJSON, which is licesned under the MIT license.  Read more here:  sourceforge.net/project/cjson.  There is nothing to download or install, the source files are included in this project's src/ directory.  To make compiling easier (to avoid modifying the makefile), cJSON.c was renamed to cJSON.cpp.
+This application uses the gnuplot_i module written by N. Devillard <nDevil@eso.org>.  It was obtained from http://ndevilla.free.fr/gnuplot/.  The .c file was renamed to .cpp to avoid changing my makefile.  gnuplot_i is freely distributed.
+
+This application uses cJSON, which is licesned under the MIT license.  Read more here:  sourceforge.net/project/cjson.  To make compiling easier (to avoid modifying the makefile), cJSON.c was renamed to cJSON.cpp.
 
 Starting with a brand new Raspberry Pi, follow these instructions to get started.
 

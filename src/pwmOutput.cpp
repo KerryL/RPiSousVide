@@ -217,6 +217,8 @@ bool PWMOutput::SetFrequency(double frequency, unsigned int minResolution)
 	pwmSetClock(divisor);
 	SetRange(newRange);
 
+	frequency = pwmClockFrequency / (double)divisor / (double)newRange;
+
 	return true;
 }
 
