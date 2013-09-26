@@ -23,6 +23,7 @@ class GPIO;
 class TimeHistoryLog;
 struct FrontToBackMessage;
 struct BackToFrontMessage;
+class GNUPlotter;
 
 class SousVide
 {
@@ -116,6 +117,15 @@ private:
 	void ExitActiveState(void);
 
 	Command command;
+
+	GNUPlotter *plotter;
+	void ResetPlot(void);
+	void UpdatePlotFile(void);
+	void UpdatePlotData(double commandedTemperature, double actualTemperature);
+	std::vector<double> plotTime, plotCommandedTemperature, plotActualTemperature;
+	double yMin, yMax;
+	static const std::string plotFileName;
+	time_t plotStartTime;
 };
 
 #endif// SOUS_VIDE_H_

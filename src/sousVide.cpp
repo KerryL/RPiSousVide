@@ -29,6 +29,7 @@
 #include "timeHistoryLog.h"
 #include "networkMessageDefs.h"
 #include "autoTuner.h"
+#include "gnuPlotter.h"
 
 //==========================================================================
 // Class:			None
@@ -93,6 +94,7 @@ int main(int argc, char *argv[])
 //==========================================================================
 const std::string SousVide::configFileName = "sousVide.rc";
 const std::string SousVide::autoTuneLogName = "autoTune.log";
+const std::string SousVide::plotFileName = "temperaturePlot.png";
 
 //==========================================================================
 // Class:			SousVide
@@ -142,6 +144,7 @@ SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger())
 
 	thLog = NULL;
 	thLogFile = NULL;
+	plotter = NULL;
 
 	maxElements = configuration.system.activeFrequency * configuration.system.statisticsTime;
 	keyElement = 0;
@@ -168,6 +171,7 @@ SousVide::~SousVide()
 	delete ni;
 	delete controller;
 	delete pumpRelay;
+	delete plotter;
 
 	CleanUpTimeHistoryLog();
 }
@@ -232,7 +236,7 @@ void SousVide::Run()
 		if (sendClientMessage)
 		{
 			if (!ni->SendData(AssembleMessage()))
-				CombinedLogger::GetLogger() << "Failed to send message to front end" << std::endl;
+				CombinedLogger::GetLogger() << "Failed to send message to client(s)" << std::endl;
 			sendClientMessage = false;
 		}
 
@@ -541,6 +545,8 @@ void SousVide::EnterState(void)
 	}
 	else if (state == StateHeating)
 	{
+		ResetPlot();
+
 		controller->Reset();
 		controller->SetPlateauTemperature(plateauTemperature);
 
@@ -560,6 +566,8 @@ void SousVide::EnterState(void)
 	}
 	else if (state == StateAutoTune)
 	{
+		ResetPlot();
+
 		pumpRelay->SetOutput(true);
 		controller->DirectlySetPWMDuty(1.0);
 		SetUpAutoTuneLog();
@@ -598,6 +606,10 @@ void SousVide::ProcessState(void)
 		return;
 	}
 
+	// TODO:  When to call UpdatePlotFile()?
+	/*if (plotTime.size() > 100)
+		UpdatePlotFile();*/
+
 	if (state == StateOff)
 	{
 		// Do nothing here - this state exists only to provide an entry method for StateInitializing
@@ -626,6 +638,9 @@ void SousVide::ProcessState(void)
 			<< controller->GetActualTemperature()
 			<< controller->GetPWMDuty() << std::endl;
 
+		UpdatePlotData(controller->GetCommandedTemperature(),
+			controller->GetActualTemperature());
+
 		if (fabs(controller->GetActualTemperature() - plateauTemperature)
 			< configuration.controller.plateauTolerance)
 			nextState = StateSoaking;
@@ -638,6 +653,9 @@ void SousVide::ProcessState(void)
 		*thLog << controller->GetCommandedTemperature()
 			<< controller->GetActualTemperature()
 			<< controller->GetPWMDuty() << std::endl;
+
+		UpdatePlotData(controller->GetCommandedTemperature(),
+			controller->GetActualTemperature());
 
 		time_t now = time(NULL);
 		if (difftime(now, stateStartTime) > soakTime)
@@ -655,6 +673,9 @@ void SousVide::ProcessState(void)
 			<< controller->GetActualTemperature()
 			<< controller->GetPWMDuty() << std::endl;
 
+		UpdatePlotData(controller->GetActualTemperature(),
+			controller->GetActualTemperature());
+
 		// Just wait here until the user asks us to do something different
 		if (command == CmdReset)
 			nextState = StateInitializing;
@@ -669,6 +690,9 @@ void SousVide::ProcessState(void)
 	else if (state == StateAutoTune)
 	{
 		*thLog << controller->GetActualTemperature() << std::endl;
+
+		UpdatePlotData(controller->GetActualTemperature(),
+			controller->GetActualTemperature());
 
 		time_t now = time(NULL);
 		if (difftime(now, stateStartTime) > configuration.system.maxAutoTuneTime ||
@@ -774,8 +798,6 @@ void SousVide::ExitState(void)
 				file << time[i] << "," << temp[i] << "," << simTemp[i] << std::endl;
 
 			file.close();
-
-			// TODO:  Better way to qualify results?  Use R^2?
 		}
 		else
 			CombinedLogger::GetLogger() << "Auto-tune failed" << std::endl;
@@ -1233,4 +1255,146 @@ double SousVide::AverageVector(const std::vector<double> &values)
 		sum += values[i];
 
 	return sum / (double)values.size();
+}
+
+//==========================================================================
+// Class:			SousVide
+// Function:		ResetPlot
+//
+// Description:		Resets the plotter object.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void SousVide::ResetPlot(void)
+{
+	if (plotter)
+	{
+		// Ensure we're done all outstanding operations
+		plotter->WaitForGNUPlot();
+		delete plotter;
+	}
+
+	plotter = new GNUPlotter(CombinedLogger::GetLogger());
+	if (!plotter->PipeIsOpen())
+		return;
+
+	yMin = controller->GetActualTemperature();
+	yMax = yMin;
+
+	plotStartTime = time(NULL);
+
+	std::string cleanPath(configuration.system.temperaturePlotPath);
+	if (*(cleanPath.end() - 1) != '/')
+		cleanPath.append("/");
+
+	plotter->SendCommand("set terminal png size 800,600");
+	plotter->SendCommand("set output \"" + cleanPath + plotFileName + "\"");
+
+	plotter->SendCommand("set multiplot");
+	plotter->SendCommand("set title \"Temperature History\"");
+	plotter->SendCommand("set xlabel \"Time [min]\"");
+	plotter->SendCommand("set ylabel \"Temperature [deg F]\"");
+
+	plotter->SendCommand("set grid");
+	plotter->SendCommand("set style line 1 lt 1 lc rgb \"red\" lw 2");
+	plotter->SendCommand("set style line 2 lt 1 lc rgb \"blue\" lw 2");
+}
+
+//==========================================================================
+// Class:			SousVide
+// Function:		UpdatePlotFile
+//
+// Description:		Resets the plotter object.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void SousVide::UpdatePlotFile(void)
+{
+	assert(plotter);
+
+	double cmdMin = *std::min_element(plotCommandedTemperature.begin(), plotCommandedTemperature.end());
+	double cmdMax = *std::min_element(plotActualTemperature.begin(), plotActualTemperature.end());
+	double actMin = *std::max_element(plotCommandedTemperature.begin(), plotCommandedTemperature.end());
+	double actMax = *std::max_element(plotActualTemperature.begin(), plotActualTemperature.end());
+
+	if (cmdMin < yMin)
+		yMin = cmdMin;
+	if (actMin < yMin)
+		yMin = actMin;
+	if (cmdMax > yMax)
+		yMax = cmdMax;
+	if (actMax > yMax)
+		yMax = actMax;
+
+	const double yPadding(1.05);
+	std::stringstream s;
+	s << "[" << yMin * yPadding << ":" << yMax * yPadding << "]" << std::endl;
+	plotter->SendCommand("set yrange " + s.str());
+
+	const double legendXRatio(0.1), legendYRatio(0.9), legendEntryHeightRatio(0.05);
+	const double xRange(plotTime[plotTime.size() - 1]);
+	const double xLegend(xRange * legendXRatio);// xMin is always zero
+	const double yRange((yMax - yMin) * yPadding);
+	const double yLegend(yRange * legendYRatio + yMin);
+	const double entryHeight(yRange * legendEntryHeightRatio);
+
+	s.str("");
+	s << xLegend << "," << yLegend;
+	plotter->SendCommand("set key at " + s.str());
+	plotter->PlotYAgainstX(0, plotTime, plotCommandedTemperature, "title \"Commanded\" ls 1 with lines");
+
+	s.str("");
+	s << xLegend << "," << yLegend - entryHeight;
+	plotter->SendCommand("set key at " + s.str());
+	plotter->PlotYAgainstX(1, plotTime, plotActualTemperature, "title \"Actual\" ls 2 with lines");
+
+	plotter->SendCommand("replot");
+
+	// TODO:  Do we need to do anything to ensure the plot file is written here?
+
+	plotTime.clear();
+	plotCommandedTemperature.clear();
+	plotActualTemperature.clear();
+}
+
+//==========================================================================
+// Class:			SousVide
+// Function:		UpdatePlotData
+//
+// Description:		Updates the buffers that store data for plotting.
+//
+// Input Arguments:
+//		commandedTemperature	= double [deg F]
+//		actualTemperature		= double [deg F]
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void SousVide::UpdatePlotData(double commandedTemperature,
+	double actualTemperature)
+{
+	time_t now = time(NULL);
+	plotTime.push_back(difftime(now, plotStartTime) / 60.0);// Plot time in minutes
+	plotCommandedTemperature.push_back(commandedTemperature);
+	plotActualTemperature.push_back(actualTemperature);
 }

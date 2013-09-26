@@ -8,6 +8,9 @@
 #include <fstream>
 #include <algorithm>
 
+// *nix headers
+#include <sys/stat.h>
+
 // Local headers
 #include "sousVideConfig.h"
 
@@ -55,6 +58,7 @@ const std::string SousVideConfig::ConfigFields::SystemStatisticsTimeKey				= "st
 const std::string SousVideConfig::ConfigFields::SystemMaxHeatingRateKey				= "maxHeatingRate";
 const std::string SousVideConfig::ConfigFields::SystemMaxAutoTuneTimeKey			= "maxAutoTuneTime";
 const std::string SousVideConfig::ConfigFields::SystemMaxAutoTuneTemperatureRiseKey	= "maxAutoTuneTemperatureRise";
+const std::string SousVideConfig::ConfigFields::SystemTemperaturePlotPathKey		= "temperaturePlotPath";
 
 //==========================================================================
 // Class:			SousVideConfig
@@ -177,6 +181,7 @@ void SousVideConfig::AssignDefaults(void)
 	system.maxHeatingRate = -1.0;// [deg F/sec] invalid -> must be specified by user
 	system.maxAutoTuneTime = 30.0 * 60.0;// [sec]
 	system.maxAutoTuneTemperatureRise = 15.0;// [deg F]
+	system.temperaturePlotPath = ".";
 }
 
 //==========================================================================
@@ -489,6 +494,18 @@ bool SousVideConfig::SystemConfigIsOK(void) const
 		ok = false;
 	}
 
+	struct stat info;
+	if (stat(system.temperaturePlotPath.c_str(), &info) != 0)
+	{
+		outStream << "System:  " << "Path indicated by " << ConfigFields::SystemTemperaturePlotPathKey << " does not exist" << std::endl;
+		ok = false;
+	}
+	else if (!S_ISDIR(info.st_mode))
+	{
+		outStream << "System:  " << "Path indicated by " << ConfigFields::SystemTemperaturePlotPathKey << " is not a directory" << std::endl;
+		ok = false;
+	}
+
 	return ok;
 }
 
@@ -602,6 +619,8 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 		system.maxAutoTuneTime = atof(data.c_str());
 	else if (field.compare(ConfigFields::SystemMaxAutoTuneTemperatureRiseKey) == 0)
 		system.maxAutoTuneTemperatureRise = atof(data.c_str());
+	else if (field.compare(ConfigFields::SystemTemperaturePlotPathKey) == 0)
+		system.temperaturePlotPath = data.c_str();
 	else
 		outStream << "Unknown config field: " << field << std::endl;
 }

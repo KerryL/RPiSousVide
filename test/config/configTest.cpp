@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
 	cout << "  Max. Heating Rate = " << config.system.maxHeatingRate << " deg F/sec" << endl;
 	cout << "  Max. Auto-Tune Time = " << config.system.maxAutoTuneTime << " sec" << endl;
 	cout << "  Max. Auto-Tune Temperature Rise = " << config.system.maxAutoTuneTemperatureRise << " deg F" << endl;
+	cout << "  Temperature Plot Path = " << config.system.temperaturePlotPath << endl;
 
 	return 0;
 }

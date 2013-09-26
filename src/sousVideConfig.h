@@ -61,6 +61,8 @@ struct SystemConfiguration
 
 	double maxAutoTuneTime;// [sec]
 	double maxAutoTuneTemperatureRise;// [deg F]
+
+	std::string temperaturePlotPath;
 };
 
 struct SousVideConfig
@@ -118,6 +120,7 @@ private:
 		static const std::string SystemMaxHeatingRateKey;
 		static const std::string SystemMaxAutoTuneTimeKey;
 		static const std::string SystemMaxAutoTuneTemperatureRiseKey;
+		static const std::string SystemTemperaturePlotPathKey;
 	};
 
 	void SplitFieldFromData(const std::string &line, std::string &field, std::string &data);

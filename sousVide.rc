@@ -41,3 +41,4 @@ kp = 1# [%/deg F]
 maxHeatingRate = 1# [deg F/sec]
 #maxAutoTuneTime = 1800# [sec]
 #maxAutoTuneTemperatureRise = 15# [deg F]
+#temperaturePlotPath="."

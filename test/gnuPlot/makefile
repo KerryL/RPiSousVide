@@ -13,7 +13,7 @@ DIRS = \
 
 # Source files
 #SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
-SRC=.src/gnuplot_i.cpp \
+SRC=.src/gnuPlotter.cpp \
 	gnuPlotTest.cpp
 
 # Object files
@@ -25,7 +25,7 @@ all: $(TARGET)
 
 copy:
 	$(MKDIR) .src/
-	cp ../../src/gnuplot_i.cpp .src/
+	cp ../../src/gnuPlotter.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

@@ -1,6 +1,6 @@
 Raspbery Pi Sous Vide Controller
 
-This application uses the gnuplot_i module written by N. Devillard <nDevil@eso.org>.  It was obtained from http://ndevilla.free.fr/gnuplot/.  The .c file was renamed to .cpp to avoid changing my makefile.  gnuplot_i is freely distributed.
+This application includes an interface to gnuplot (using pipes) that is roughly based on gnuplot_i module written by N. Devillard <nDevil@eso.org>.  More information can be obtained from http://ndevilla.free.fr/gnuplot/.
 
 This application uses cJSON, which is licesned under the MIT license.  Read more here:  sourceforge.net/project/cjson.  To make compiling easier (to avoid modifying the makefile), cJSON.c was renamed to cJSON.cpp.
 
@@ -33,6 +33,8 @@ http://wiringpi.com/download-and-install/.  I was originally planning on writing
 Again, cross-compiling makes stuff more difficult.  The instructions above are fine if you're compiling on the RPi.  If you want to cross-compile, you'll need to make the following changes:
 - change the makefile (wiringPi/wiringPi/Makefile), line 36 to use the cross-compiler built in step 2 above.  If you follow exactly as the instructions are writting, the compiler would be arm-unknown-linux-gnueabi-g++.  Also, the makefile doesn't define macros for the archiver and ranlib.  You'll need to define those yourself and use those found in the x-tools binary directory you built, then use them in place of ar and ranlib below.
 - the INSTALL file has instructions for building a statically-linked library.  If we cross-compile, our options are either link it statically, or install it on the Pi, too, in order to use the dynamic library (which is what builds by default).  I'm shooting for statically linking, at first, anyway, we'll see how it goes.
+
+5.  Install (compile? what's required here?) gnuplot on the Raspberry Pi.  TODO
 
 5.  Build RPiSousVide using the included makefile (make changes as appropriate if you didn't exactly follow the instructions above), and copy to your Raspberry Pi.  Note that re-building can be carried out by using '$make clean' followed by '$make' if using the included makefile.
 
