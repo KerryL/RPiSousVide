@@ -10,6 +10,8 @@
 // Standard C++ headers
 #include <string>
 #include <iostream>
+#include <map>
+#include <cassert>
 
 struct NetworkConfiguration
 {
@@ -79,8 +81,12 @@ public:
 	SystemConfiguration system;
 
 private:
+	static const std::string commentCharacter;
 	std::ostream& outStream;
 
+	template <typename T>
+	void AddConfigItem(const std::string &key, T& data);
+	void BuildConfigItems(void);
 	void AssignDefaults(void);
 
 	bool ConfigIsOK(void) const;
@@ -90,42 +96,81 @@ private:
 	bool InterlockConfigIsOK(void) const;
 	bool SystemConfigIsOK(void) const;
 
-	struct ConfigFields
-	{
-		static const std::string CommentCharacter;
-
-		static const std::string NetworkPortKey;
-
-		static const std::string IOPumpPinKey;
-		static const std::string IOHeaterPinKey;
-		static const std::string IOSensorIDKey;
-
-		static const std::string ControllerKpKey;
-		static const std::string ControllerTiKey;
-		static const std::string ControllerKdKey;
-		static const std::string ControllerKfKey;
-		static const std::string ControllerTdKey;
-		static const std::string ControllerTfKey;
-		static const std::string ControllerPlateauToleranceKey;
-		static const std::string ControllerPWMFrequencyKey;
-
-		static const std::string InterlockMaxSaturationTimeKey;
-		static const std::string InterlockMaxTemperatureKey;
-		static const std::string InterlockTemperatureToleranceKey;
-		static const std::string InterlockMinErrorTimeKey;
-
-		static const std::string SystemIdleFrequencyKey;
-		static const std::string SystemActiveFrequencyKey;
-		static const std::string SystemStatisticsTimeKey;
-		static const std::string SystemMaxHeatingRateKey;
-		static const std::string SystemMaxAutoTuneTimeKey;
-		static const std::string SystemMaxAutoTuneTemperatureRiseKey;
-		static const std::string SystemTemperaturePlotPathKey;
-	};
-
 	void SplitFieldFromData(const std::string &line, std::string &field, std::string &data);
 	void ProcessConfigItem(const std::string &field, const std::string &data);
-	bool ReadBooleanValue(const std::string &data) const;
+	bool ReadBooleanValue(const std::string &dataString) const;
+
+	class ConfigItem
+	{
+	public:
+		enum Type
+		{
+			TypeBool,
+			TypeUnsignedChar,
+			TypeChar,
+			TypeUnsignedShort,
+			TypeShort,
+			TypeUnsignedInt,
+			TypeInt,
+			TypeUnsignedLong,
+			TypeLong,
+			TypeFloat,
+			TypeDouble,
+			TypeString
+		};
+
+		ConfigItem(bool &b) : type(TypeBool) { data.b = &b; };
+		ConfigItem(unsigned char &uc) : type(TypeUnsignedChar) { data.uc = &uc; };
+		ConfigItem(char &c) : type(TypeChar) { data.c = &c; };
+		ConfigItem(unsigned short &us) : type(TypeUnsignedShort) { data.us = &us; };
+		ConfigItem(short &s) : type(TypeShort) { data.s = &s; };
+		ConfigItem(unsigned int &ui) : type(TypeUnsignedInt) { data.ui = &ui; };
+		ConfigItem(int &i) : type(TypeInt) { data.i = &i; };
+		ConfigItem(unsigned long &ul) : type(TypeUnsignedLong) { data.ul = &ul; };
+		ConfigItem(long &l) : type(TypeLong) { data.l = &l; };
+		ConfigItem(float &f) : type(TypeFloat) { data.f = &f; };
+		ConfigItem(double &d) : type(TypeDouble) { data.d = &d; };
+		ConfigItem(std::string &st) : type(TypeString) { this->st = &st; };
+
+		void AssignValue(const std::string &data);
+
+	private:
+		const Type type;
+
+		union
+		{
+			bool* b;
+			unsigned char* uc;
+			char* c;
+			unsigned short* us;
+			short* s;
+			unsigned int* ui;
+			int* i;
+			unsigned long* ul;
+			long* l;
+			float* f;
+			double* d;
+		} data;
+
+		std::string* st;
+	};
+
+	std::map<std::string, ConfigItem> configItems;
+	std::map<void* const, std::string> keyMap;
+
+	template <typename T>
+	std::string GetKey(const T& i) const { return (*keyMap.find((void* const)&i)).second; }
 };
+
+template <typename T>
+void SousVideConfig::AddConfigItem(const std::string &key, T& data)
+{
+	ConfigItem item(data);
+	bool success = configItems.insert(std::make_pair(key, item)).second;
+	assert(success);
+
+	success = keyMap.insert(std::make_pair((void*)&data, key)).second;
+	assert(success);
+}
 
 #endif// SOUS_VIDE_CONFIG_H_

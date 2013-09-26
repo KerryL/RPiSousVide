@@ -7,6 +7,7 @@
 // Standard C++ headers
 #include <fstream>
 #include <algorithm>
+#include <sstream>
 
 // *nix headers
 #include <sys/stat.h>
@@ -30,35 +31,7 @@
 //		None
 //
 //==========================================================================
-const std::string SousVideConfig::ConfigFields::CommentCharacter					= "#";
-
-const std::string SousVideConfig::ConfigFields::NetworkPortKey						= "port";
-
-const std::string SousVideConfig::ConfigFields::IOPumpPinKey						= "pumpPin";
-const std::string SousVideConfig::ConfigFields::IOHeaterPinKey						= "heaterPin";
-const std::string SousVideConfig::ConfigFields::IOSensorIDKey						= "sensorID";
-
-const std::string SousVideConfig::ConfigFields::ControllerKpKey						= "kp";
-const std::string SousVideConfig::ConfigFields::ControllerKdKey						= "kd";
-const std::string SousVideConfig::ConfigFields::ControllerTiKey						= "ti";
-const std::string SousVideConfig::ConfigFields::ControllerKfKey						= "kf";
-const std::string SousVideConfig::ConfigFields::ControllerTdKey						= "td";
-const std::string SousVideConfig::ConfigFields::ControllerTfKey						= "tf";
-const std::string SousVideConfig::ConfigFields::ControllerPlateauToleranceKey		= "plateauTolerance";
-const std::string SousVideConfig::ConfigFields::ControllerPWMFrequencyKey			= "pwmFrequency";
-
-const std::string SousVideConfig::ConfigFields::InterlockMaxSaturationTimeKey		= "maxSaturationTime";
-const std::string SousVideConfig::ConfigFields::InterlockMaxTemperatureKey			= "maxTemperature";
-const std::string SousVideConfig::ConfigFields::InterlockTemperatureToleranceKey	= "temperatureTolerance";
-const std::string SousVideConfig::ConfigFields::InterlockMinErrorTimeKey			= "minErrorTime";
-
-const std::string SousVideConfig::ConfigFields::SystemIdleFrequencyKey				= "idleFrequency";
-const std::string SousVideConfig::ConfigFields::SystemActiveFrequencyKey			= "activeFrequency";
-const std::string SousVideConfig::ConfigFields::SystemStatisticsTimeKey				= "statisticsTime";
-const std::string SousVideConfig::ConfigFields::SystemMaxHeatingRateKey				= "maxHeatingRate";
-const std::string SousVideConfig::ConfigFields::SystemMaxAutoTuneTimeKey			= "maxAutoTuneTime";
-const std::string SousVideConfig::ConfigFields::SystemMaxAutoTuneTemperatureRiseKey	= "maxAutoTuneTemperatureRise";
-const std::string SousVideConfig::ConfigFields::SystemTemperaturePlotPathKey		= "temperaturePlotPath";
+const std::string SousVideConfig::commentCharacter	= "#";
 
 //==========================================================================
 // Class:			SousVideConfig
@@ -78,7 +51,56 @@ const std::string SousVideConfig::ConfigFields::SystemTemperaturePlotPathKey		= 
 //==========================================================================
 SousVideConfig::SousVideConfig(std::ostream &outStream) : outStream(outStream)
 {
+	BuildConfigItems();
 	AssignDefaults();
+}
+
+//==========================================================================
+// Class:			SousVideConfig
+// Function:		BuildConfigItems
+//
+// Description:		Builds the map of key-data pairs that relate string identifiers
+//					with each config data field.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void SousVideConfig::BuildConfigItems(void)
+{
+	AddConfigItem("port", network.port);
+
+	AddConfigItem("pumpPin", io.pumpRelayPin);
+	AddConfigItem("heaterPin", io.heaterRelayPin);
+	AddConfigItem("sensorID", io.sensorID);
+
+	AddConfigItem("kp", controller.kp);
+	AddConfigItem("ti", controller.ti);
+	AddConfigItem("kd", controller.kd);
+	AddConfigItem("kf", controller.kf);
+	AddConfigItem("td", controller.td);
+	AddConfigItem("tf", controller.tf);
+	AddConfigItem("plateauTolerance", controller.plateauTolerance);
+	AddConfigItem("pwmFrequency", controller.pwmFrequency);
+
+	AddConfigItem("maxSaturationTime", system.interlock.maxSaturationTime);
+	AddConfigItem("maxTemperature", system.interlock.maxTemperature);
+	AddConfigItem("temperatureTolerance", system.interlock.temperatureTolerance);
+	AddConfigItem("minErrorTime", system.interlock.minErrorTime);
+
+	AddConfigItem("idleFrequency", system.idleFrequency);
+	AddConfigItem("activeFrequency", system.activeFrequency);
+	AddConfigItem("statisticsTime", system.statisticsTime);
+	AddConfigItem("maxHeatingRate", system.maxHeatingRate);
+	AddConfigItem("maxAutoTuneTime", system.maxAutoTuneTime);
+	AddConfigItem("maxAutoTuneTemperatureRise", system.maxAutoTuneTemperatureRise);
+	AddConfigItem("temperaturePlotPath", system.temperaturePlotPath);
 }
 
 //==========================================================================
@@ -118,10 +140,10 @@ bool SousVideConfig::ReadConfiguration(std::string fileName)
 		if (line.empty())
 			continue;
 
-		if (ConfigFields::CommentCharacter.compare(line.substr(0,1)) != 0
+		if (commentCharacter.compare(line.substr(0,1)) != 0
 			&& line.find(" ") != std::string::npos)
 		{
-			inLineComment = line.find(ConfigFields::CommentCharacter);
+			inLineComment = line.find(commentCharacter);
 			if (inLineComment != std::string::npos)
 				line = line.substr(0, inLineComment);
 
@@ -234,7 +256,7 @@ bool SousVideConfig::NetworkConfigIsOK(void) const
 	// Don't allow ports that will require root access
 	if (network.port < 1024)
 	{
-		outStream << "Network:  " << ConfigFields::NetworkPortKey << " must be 1024 or greater" << std::endl;
+		outStream << "Network:  " << GetKey(network.port) << " must be 1024 or greater" << std::endl;
 		ok = false;
 	}
 
@@ -263,36 +285,36 @@ bool SousVideConfig::IOConfigIsOK(void) const
 
 	if (io.pumpRelayPin < 0)
 	{
-		outStream << "IO:  " << ConfigFields::IOPumpPinKey << " must be positive" << std::endl;
+		outStream << "IO:  " << GetKey(io.pumpRelayPin) << " must be positive" << std::endl;
 		ok = false;
 	}
 	else if (io.pumpRelayPin > 20)
 	{
-		outStream << "IO:  " << ConfigFields::IOPumpPinKey << " must be less than or equal to 20" << std::endl;
+		outStream << "IO:  " << GetKey(io.pumpRelayPin) << " must be less than or equal to 20" << std::endl;
 		ok = false;
 	}
 
 	if (io.heaterRelayPin < 0)
 	{
-		outStream << "IO:  " << ConfigFields::IOHeaterPinKey << " must be positive" << std::endl;
+		outStream << "IO:  " << GetKey(io.heaterRelayPin) << " must be positive" << std::endl;
 		ok = false;
 	}
 	else if (io.heaterRelayPin > 20)
 	{
-		outStream << "IO:  " << ConfigFields::IOHeaterPinKey << " must be less than or equal to 20" << std::endl;
+		outStream << "IO:  " << GetKey(io.heaterRelayPin) << " must be less than or equal to 20" << std::endl;
 		ok = false;
 	}
 
 	if (io.heaterRelayPin == io.pumpRelayPin)
 	{
-		outStream << "IO:  " << ConfigFields::IOPumpPinKey << " and "
-			<< ConfigFields::IOHeaterPinKey << " must be unique" << std::endl;
+		outStream << "IO:  " << GetKey(io.heaterRelayPin) << " and "
+			<< GetKey(io.pumpRelayPin) << " must be unique" << std::endl;
 		ok = false;
 	}
 
 	if (io.sensorID.length() != 15)
 	{
-		outStream << "IO:  " << ConfigFields::IOSensorIDKey << " must contain 15 characters" << std::endl;
+		outStream << "IO:  " <<GetKey(io.sensorID) << " must contain 15 characters" << std::endl;
 		ok = false;
 	}
 
@@ -321,44 +343,44 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 
 	if (controller.kp < 0.0)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerKpKey << " must be positive ("
-			<< ConfigFields::ControllerKpKey << " must be specified)" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.kp) << " must be positive ("
+			<< GetKey(controller.kp) << " must be specified)" << std::endl;
 		ok = false;
 	}
 
 	if (controller.ti < 0.0)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerTiKey << " must be positive" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.ti) << " must be positive" << std::endl;
 		ok = false;
 	}
 
 	if (controller.kd < 0.0)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerKdKey << " must be positive" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.kd) << " must be positive" << std::endl;
 		ok = false;
 	}
 
 	if (controller.kf < 0.0)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerKfKey << " must be positive" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.kf) << " must be positive" << std::endl;
 		ok = false;
 	}
 
 	if (controller.td <= 0.0)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerTdKey << " must be strictly positive" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.td) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
 	if (controller.tf <= 0.0)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerTfKey << " must be strictly positive" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.tf) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
 	if (controller.plateauTolerance <= 0.0)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerPlateauToleranceKey << " must be strictly positive" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.plateauTolerance) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
@@ -368,12 +390,12 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 	const double pwmMaxFrequency(96000.0);// [Hz]
 	if (controller.pwmFrequency < pwmMinFrequency)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerPWMFrequencyKey << " must be greater than " << pwmMinFrequency << " Hz" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.pwmFrequency) << " must be greater than " << pwmMinFrequency << " Hz" << std::endl;
 		ok = false;
 	}
 	else if (controller.pwmFrequency > pwmMaxFrequency)
 	{
-		outStream << "Controller:  " << ConfigFields::ControllerPWMFrequencyKey << " must be less than " << pwmMaxFrequency << " Hz" << std::endl;
+		outStream << "Controller:  " << GetKey(controller.pwmFrequency) << " must be less than " << pwmMaxFrequency << " Hz" << std::endl;
 		ok = false;
 	}
 
@@ -402,35 +424,35 @@ bool SousVideConfig::InterlockConfigIsOK(void) const
 
 	if (system.interlock.maxSaturationTime <= 0.0)
 	{
-		outStream << "Interlock:  " << ConfigFields::InterlockMaxSaturationTimeKey << " must be strictly positive" << std::endl;
+		outStream << "Interlock:  " << GetKey(system.interlock.maxSaturationTime) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
 	if (system.interlock.maxTemperature < 100.0)
 	{
-		outStream << "Interlock:  " << ConfigFields::InterlockMaxTemperatureKey << " must be greater than 100.0 deg F" << std::endl;
+		outStream << "Interlock:  " << GetKey(system.interlock.maxTemperature) << " must be greater than 100.0 deg F" << std::endl;
 		ok = false;
 	}
 	else if  (system.interlock.maxTemperature > 212.0)
 	{
-		outStream << "Interlock:  " << ConfigFields::InterlockMaxTemperatureKey << " must be less than 212.0 deg F" << std::endl;
+		outStream << "Interlock:  " << GetKey(system.interlock.maxTemperature) << " must be less than 212.0 deg F" << std::endl;
 		ok = false;
 	}
 
 	if (system.interlock.temperatureTolerance <= 0.0)
 	{
-		outStream << "Interlock:  " << ConfigFields::InterlockTemperatureToleranceKey << " must be strictly positive" << std::endl;
+		outStream << "Interlock:  " << GetKey(system.interlock.temperatureTolerance) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 	else if (system.interlock.temperatureTolerance > 30.0)
 	{
-		outStream << "Interlock:  " << ConfigFields::InterlockTemperatureToleranceKey << " must be less than 30 deg F" << std::endl;
+		outStream << "Interlock:  " << GetKey(system.interlock.temperatureTolerance) << " must be less than 30 deg F" << std::endl;
 		ok = false;
 	}
 
 	if (system.interlock.minErrorTime < 0.0)
 	{
-		outStream << "Interlock:  " << ConfigFields::InterlockMinErrorTimeKey << " must be positive" << std::endl;
+		outStream << "Interlock:  " << GetKey(system.interlock.minErrorTime) << " must be positive" << std::endl;
 		ok = false;
 	}
 
@@ -459,52 +481,54 @@ bool SousVideConfig::SystemConfigIsOK(void) const
 
 	if (system.idleFrequency <= 0.0)
 	{
-		outStream << "System:  " << ConfigFields::SystemIdleFrequencyKey << " must be strictly positive" << std::endl;
+		outStream << "System:  " << GetKey(system.idleFrequency) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
 	if (system.activeFrequency <= 0.0)
 	{
-		outStream << "System:  " << ConfigFields::SystemActiveFrequencyKey << " must be strictly positive" << std::endl;
+		outStream << "System:  " << GetKey(system.activeFrequency) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
 	if (system.statisticsTime < 0.0)
 	{
-		outStream << "System:  " << ConfigFields::SystemStatisticsTimeKey << " must be positive" << std::endl;
+		outStream << "System:  " << GetKey(system.statisticsTime) << " must be positive" << std::endl;
 		ok = false;
 	}
 
 	if (system.maxHeatingRate <= 0.0)
 	{
-		outStream << "System:  " << ConfigFields::SystemMaxHeatingRateKey << " must be strictly positive ("
-			<< ConfigFields::SystemMaxHeatingRateKey << " must be specified)" << std::endl;
+		outStream << "System:  " << GetKey(system.maxHeatingRate) << " must be strictly positive ("
+			<< GetKey(system.maxHeatingRate) << " must be specified)" << std::endl;
 		ok = false;
 	}
 
 	if (system.maxAutoTuneTime <= 0.0)
 	{
-		outStream << "System:  " << ConfigFields::SystemMaxAutoTuneTimeKey << " must be strictly positive" << std::endl;
+		outStream << "System:  " << GetKey(system.maxAutoTuneTime) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
 	if (system.maxAutoTuneTemperatureRise <= 0.0)
 	{
-		outStream << "System:  " << ConfigFields::SystemMaxAutoTuneTemperatureRiseKey << " must be strictly positive" << std::endl;
+		outStream << "System:  " << GetKey(system.maxAutoTuneTemperatureRise) << " must be strictly positive" << std::endl;
 		ok = false;
 	}
 
 	struct stat info;
 	if (stat(system.temperaturePlotPath.c_str(), &info) != 0)
 	{
-		outStream << "System:  " << "Path indicated by " << ConfigFields::SystemTemperaturePlotPathKey << " does not exist" << std::endl;
+		outStream << "System:  " << "Path indicated by " << GetKey(system.temperaturePlotPath) << " does not exist" << std::endl;
 		ok = false;
 	}
+#ifndef WIN32
 	else if (!S_ISDIR(info.st_mode))
 	{
-		outStream << "System:  " << "Path indicated by " << ConfigFields::SystemTemperaturePlotPathKey << " is not a directory" << std::endl;
+		outStream << "System:  " << "Path indicated by " << GetKey(system.temperaturePlotPath) << " is not a directory" << std::endl;
 		ok = false;
 	}
+#endif
 
 	return ok;
 }
@@ -575,52 +599,8 @@ void SousVideConfig::SplitFieldFromData(const std::string &line,
 //==========================================================================
 void SousVideConfig::ProcessConfigItem(const std::string &field, const std::string &data)
 {
-	if (field.compare(ConfigFields::NetworkPortKey) == 0)
-		network.port = (unsigned short)atoi(data.c_str());
-	else if (field.compare(ConfigFields::IOPumpPinKey) == 0)
-		io.pumpRelayPin = atoi(data.c_str());
-	else if (field.compare(ConfigFields::IOHeaterPinKey) == 0)
-		io.heaterRelayPin = atoi(data.c_str());
-	else if (field.compare(ConfigFields::IOSensorIDKey) == 0)
-		io.sensorID = data;
-	else if (field.compare(ConfigFields::ControllerKpKey) == 0)
-		controller.kp = atof(data.c_str());
-	else if (field.compare(ConfigFields::ControllerTiKey) == 0)
-		controller.ti = atof(data.c_str());
-	else if (field.compare(ConfigFields::ControllerKdKey) == 0)
-		controller.kd = atof(data.c_str());
-	else if (field.compare(ConfigFields::ControllerKfKey) == 0)
-		controller.kf = atof(data.c_str());
-	else if (field.compare(ConfigFields::ControllerTdKey) == 0)
-		controller.td = atof(data.c_str());
-	else if (field.compare(ConfigFields::ControllerTfKey) == 0)
-		controller.tf = atof(data.c_str());
-	else if (field.compare(ConfigFields::ControllerPlateauToleranceKey) == 0)
-		controller.plateauTolerance = atof(data.c_str());
-	else if (field.compare(ConfigFields::ControllerPWMFrequencyKey) == 0)
-		controller.pwmFrequency = atof(data.c_str());
-	else if (field.compare(ConfigFields::InterlockMaxSaturationTimeKey) == 0)
-		system.interlock.maxSaturationTime = atof(data.c_str());
-	else if (field.compare(ConfigFields::InterlockMaxTemperatureKey) == 0)
-		system.interlock.maxTemperature = atof(data.c_str());
-	else if (field.compare(ConfigFields::InterlockTemperatureToleranceKey) == 0)
-		system.interlock.temperatureTolerance = atof(data.c_str());
-	else if (field.compare(ConfigFields::InterlockMinErrorTimeKey) == 0)
-		system.interlock.minErrorTime = atof(data.c_str());
-	else if (field.compare(ConfigFields::SystemIdleFrequencyKey) == 0)
-		system.idleFrequency = atof(data.c_str());
-	else if (field.compare(ConfigFields::SystemActiveFrequencyKey) == 0)
-		system.activeFrequency = atof(data.c_str());
-	else if (field.compare(ConfigFields::SystemStatisticsTimeKey) == 0)
-		system.statisticsTime = atof(data.c_str());
-	else if (field.compare(ConfigFields::SystemMaxHeatingRateKey) == 0)
-		system.maxHeatingRate = atof(data.c_str());
-	else if (field.compare(ConfigFields::SystemMaxAutoTuneTimeKey) == 0)
-		system.maxAutoTuneTime = atof(data.c_str());
-	else if (field.compare(ConfigFields::SystemMaxAutoTuneTemperatureRiseKey) == 0)
-		system.maxAutoTuneTemperatureRise = atof(data.c_str());
-	else if (field.compare(ConfigFields::SystemTemperaturePlotPathKey) == 0)
-		system.temperaturePlotPath = data.c_str();
+	if (configItems.count(field) > 0)
+		(*configItems.find(field)).second.AssignValue(data);
 	else
 		outStream << "Unknown config field: " << field << std::endl;
 }
@@ -647,4 +627,52 @@ void SousVideConfig::ProcessConfigItem(const std::string &field, const std::stri
 bool SousVideConfig::ReadBooleanValue(const std::string &data) const
 {
 	return atoi(data.c_str()) == 1 || data.empty();
+}
+
+//==========================================================================
+// Class:			ConfigItem
+// Function:		AssignValue
+//
+// Description:		Assigns the value of the data string to the appropriate
+//					dereferenced pointed, based on the this item's type.
+//
+// Input Arguments:
+//		dataString	= const std::string&
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void SousVideConfig::ConfigItem::AssignValue(const std::string &dataString)
+{
+	std::stringstream ss(dataString);
+	if (type == TypeBool)
+		ss >> *data.b;
+	else if (type == TypeUnsignedChar)
+		ss >> *data.uc;
+	else if (type ==TypeChar)
+		ss >> *data.c;
+	else if (type ==TypeUnsignedShort)
+		ss >> *data.us;
+	else if (type ==TypeShort)
+		ss >> *data.s;
+	else if (type ==TypeUnsignedInt)
+		ss >> *data.ui;
+	else if (type ==TypeInt)
+		ss >> *data.i;
+	else if (type ==TypeUnsignedLong)
+		ss >> *data.ul;
+	else if (type ==TypeLong)
+		ss >> *data.l;
+	else if (type ==TypeFloat)
+		ss >> *data.f;
+	else if (type ==TypeDouble)
+		ss >> *data.d;
+	else if (type ==TypeString)
+		ss >> *st;
+	else
+		assert(false);
 }

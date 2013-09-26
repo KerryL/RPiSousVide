@@ -36,7 +36,6 @@ kp = 1# [%/deg F]
 # System configuration
 #idleFrequency = 0.2# [Hz]
 #activeFrequency = 1# [Hz]
-#pwmFrequency = 10# [Hz]
 #statisticsTime = 10# [sec] (0 == OFF)
 maxHeatingRate = 1# [deg F/sec]
 #maxAutoTuneTime = 1800# [sec]
