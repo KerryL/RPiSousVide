@@ -134,15 +134,15 @@ void MakeThreePlotsByAppendingData(void)
 	plotter.SendCommand("set output \"appendTest1.png\"");
 	plotter.PlotYAgainstIndex(0, data, "with lines");
 	plotter.SendCommand("replot");
-	plotter.WaitForGNUPlot("wait_test_1");
+	plotter.WaitForGNUPlot();
 
 	plotter.SendCommand("set output \"appendTest2.png\"");
 	plotter.PlotYAgainstIndex(0, data, "with lines");
 	plotter.SendCommand("replot");
-	plotter.WaitForGNUPlot("wait_test_2");
+	plotter.WaitForGNUPlot();
 
 	plotter.SendCommand("set output \"appendTest3.png\"");
 	plotter.PlotYAgainstIndex(0, data, "with lines");
 	plotter.SendCommand("replot");
-	plotter.WaitForGNUPlot("wait_test_3");
+	plotter.WaitForGNUPlot();
 }

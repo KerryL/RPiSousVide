@@ -15,6 +15,8 @@
 
 // *nix headers
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 // Local headers
 #include "gnuPlotter.h"
@@ -390,12 +392,8 @@ bool GNUPlotter::WriteTemporaryFile(unsigned int i, const std::vector<double> &x
 //					not an efficient way to go about this, so only use it if
 //					absolutely necessary.
 //
-//					If you're looking at this method thinking "my, what a
-//					kludgy hack!" you'd be right.  Unfortunately, I have no
-//					better method to offer right now.
-//
 // Input Arguments:
-//		testFileName	= std::string
+//		None
 //
 // Output Arguments:
 //		None
@@ -404,42 +402,18 @@ bool GNUPlotter::WriteTemporaryFile(unsigned int i, const std::vector<double> &x
 //		None
 //
 //==========================================================================
-void GNUPlotter::WaitForGNUPlot(std::string testFileName)
+void GNUPlotter::WaitForGNUPlot(void)
 {
-//	sleep(1000);
-// It appears that windows has some issues writing the files fast
-// enough, but Linux does.  Conversely, Linux has issues with this
-// method.  We'll skip it.
-#ifndef WIN32
-//	return;
-#endif
-	// Create file
-	std::ofstream out(testFileName.c_str(), std::ios::out);
-	out.close();
+	const std::string pipeFile("gnuFIFO");
+	int pfd;
+	mkfifo(pipeFile.c_str(), 0666);// TODO:  Check return value
+	std::string cmd("system \"echo 'test' > " + pipeFile + "\"");
+	outStream << cmd << std::endl;
+	SendCommand(cmd);
 
-	// Tell gnuplot to delete the file
-	std::string command("system \"");
-#ifdef WIN32
-	command.append("del ");
-#else
-	command.append("rm ");
-#endif
-	command.append(testFileName + "\"");
-	SendCommand(command);
-
-	// Wait for it to be deleted
-	while (true)
-	{
-		std::ifstream in(testFileName.c_str(), std::ios::in);
-		if (!in.good() || !in.is_open())
-			break;
-		in.close();
-		SendCommand(command);
-
-#ifdef WIN32
-		_sleep(100);
-#else
-		usleep(100000);
-#endif
-	}
+	// The premise is that calling open on the read end of a pipe
+	// blocks until the write end is opened
+	pfd = open(pipeFile.c_str(), O_RDONLY);
+	close(pfd);
+	remove(pipeFile.c_str());// TODO:  Check return value
 }
