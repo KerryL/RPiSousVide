@@ -8,13 +8,11 @@ TARGET = gnuPlotTest
 
 # Directories in which to search for source files
 DIRS = \
-	. \
-	.src/
+	.
 
 # Source files
-#SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
-SRC=.src/gnuPlotter.cpp \
-	gnuPlotTest.cpp
+SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
+	.src/gnuPlotter.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))

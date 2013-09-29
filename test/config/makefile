@@ -8,13 +8,12 @@ TARGET = configTest
 
 # Directories in which to search for source files
 DIRS = \
-	. \
-	.src/
+	.
 
 # Source files
-#SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
-SRC=.src/sousVideConfig.cpp \
-	configTest.cpp
+SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
+	.src/sousVideConfig.cpp \
+	.src/configFile.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
@@ -26,6 +25,7 @@ all: $(TARGET)
 copy:
 	$(MKDIR) .src/
 	cp ../../src/sousVideConfig.cpp .src/
+	cp ../../src/configFile.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

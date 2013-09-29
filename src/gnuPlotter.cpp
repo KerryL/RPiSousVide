@@ -388,32 +388,51 @@ bool GNUPlotter::WriteTemporaryFile(unsigned int i, const std::vector<double> &x
 // Function:		WaitForGNUPlot
 //
 // Description:		Waits for the specified file to be deleted by gnuplot.
-//					useful for waiting for gnuplot to finish a task.  This is
-//					not an efficient way to go about this, so only use it if
-//					absolutely necessary.
+//					Useful for waiting for gnuplot to finish a task.
 //
 // Input Arguments:
-//		None
+//		fifoName	= std::string, name to use for the pipe
 //
 // Output Arguments:
 //		None
 //
 // Return Value:
-//		None
+//		bool, true for success
 //
 //==========================================================================
-void GNUPlotter::WaitForGNUPlot(void)
+bool GNUPlotter::WaitForGNUPlot(std::string fifoName)
 {
-	const std::string pipeFile("gnuFIFO");
 	int pfd;
-	mkfifo(pipeFile.c_str(), 0666);// TODO:  Check return value
-	std::string cmd("system \"echo 'test' > " + pipeFile + "\"");
-	outStream << cmd << std::endl;
-	SendCommand(cmd);
+	if (mkfifo(fifoName.c_str(), 0666) == -1)
+	{
+		outStream << "Failed to create named pipe '" << fifoName << "'" << std::endl;
+		return false;
+	}
 
-	// The premise is that calling open on the read end of a pipe
-	// blocks until the write end is opened
-	pfd = open(pipeFile.c_str(), O_RDONLY);
-	close(pfd);
-	remove(pipeFile.c_str());// TODO:  Check return value
+	std::string cmd("system \"echo 'test' > " + fifoName + "\"");
+	if (!SendCommand(cmd))
+		return false;
+
+	// This works because calling open on the read end of a pipe
+	// blocks until the write end is opened (which will happen in gnuplot)
+	pfd = open(fifoName.c_str(), O_RDONLY);
+	if (pfd == -1)
+	{
+		outStream << "Failed to open named pipe '" << fifoName << "'" << std::endl;
+		return false;
+	}
+
+	if (close(pfd) == -1)
+	{
+		outStream << "Failed to close named pipe '" << fifoName << "'" << std::endl;
+		return false;
+	}
+
+	if (remove(fifoName.c_str()) == -1)
+	{
+		outStream << "Failed to remove named pipe '" << fifoName << "'" << std::endl;
+		return false;
+	}
+
+	return true;
 }

@@ -8,12 +8,10 @@ TARGET = serverTest
 
 # Directories in which to search for source files
 DIRS = \
-	. \
-	.src
+	.
 
 # Source files
-#SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
-SRC = serverTest.cpp \
+SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
 	.src/linuxSocket.cpp
 
 # Object files

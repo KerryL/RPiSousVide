@@ -8,13 +8,11 @@ TARGET = jsonTest
 
 # Directories in which to search for source files
 DIRS = \
-	. \
-	.src/
+	.
 
 # Source files
-#SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
-SRC=.src/cJSON.cpp \
-	jsonTest.cpp
+SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
+	.src/cJSON.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))

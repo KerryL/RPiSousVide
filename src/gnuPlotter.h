@@ -33,7 +33,7 @@ public:
 	bool PlotYAgainstX(unsigned int i, const std::vector<double> &x,
 		const std::vector<double> &y, std::string args = "", bool append = true);
 
-	void WaitForGNUPlot(void);
+	bool WaitForGNUPlot(std::string fifoName = "gnuFIFO");
 
 private:
 	static const std::string gnuPlotName;

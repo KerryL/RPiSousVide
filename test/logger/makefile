@@ -8,15 +8,13 @@ TARGET = loggerTest
 
 # Directories in which to search for source files
 DIRS = \
-	. \
-	.src/
+	.
 
 # Source files
-#SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
-SRC=.src/logger.cpp \
+SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
+	.src/logger.cpp \
 	.src/combinedLogger.cpp \
-	.src/timeHistoryLog.cpp \
-	loggerTest.cpp
+	.src/timeHistoryLog.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))

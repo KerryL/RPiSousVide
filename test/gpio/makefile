@@ -8,14 +8,12 @@ TARGET = gpioTest
 
 # Directories in which to search for source files
 DIRS = \
-	. \
-	.src/
+	.
 
 # Source files
-#SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
-SRC=.src/gpio.cpp \
-	.src/pwmOutput.cpp \
-	gpioTest.cpp
+SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
+	.src/gpio.cpp \
+	.src/pwmOutput.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
@@ -25,6 +23,8 @@ OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
 all: $(TARGET)
 
 copy:
+	echo $(SRC)
+	echo $(OBJS)
 	$(MKDIR) .src/
 	cp ../../src/gpio.cpp .src/
 	cp ../../src/pwmOutput.cpp .src/
