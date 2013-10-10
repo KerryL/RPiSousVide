@@ -4,7 +4,8 @@
 // Copy:  (c) Copyright 2013
 // Desc:  Temperature sensor object.  For use with a DS18B20 "1-wire"
 //        temperature sensor.  This is implemented using system calls, as the
-//        1-wire interface is built into the Raspian kernel.
+//        1-wire interface is built into the Raspian kernel.  Note that
+//        for this to work, the sensor must be connected to GPIO7.
 
 // Standard C++ headers
 #include <cstdlib>
@@ -81,17 +82,17 @@ TemperatureSensor::TemperatureSensor(std::string deviceID,
 //==========================================================================
 bool TemperatureSensor::GetTemperature(double &temperature) const
 {
-	std::ifstream file(deviceFile.c_str(), std::ios::in);
+	std::ifstream file(device.c_str(), std::ios::in);
 	if (!file.is_open() || !file.good())
 	{
-		outStream << "Could not open file '" << deviceFile << "' for input" << std::endl;
+		outStream << "Could not open file '" << device << "' for input" << std::endl;
 		return false;
 	}
 
 	std::string data;
 	if (!std::getline(file, data))
 	{
-		outStream << "Failed to read from file '" << deviceFile << "'" << std::endl;
+		outStream << "Failed to read CRC from file '" << device << "'" << std::endl;
 		return false;
 	}
 
@@ -105,6 +106,12 @@ bool TemperatureSensor::GetTemperature(double &temperature) const
 	if (data.substr(data.length() - 3).compare("YES") != 0)
 	{
 		outStream << "Temperature reading does not end in 'YES'" << std::endl;
+		return false;
+	}
+
+	if (!std::getline(file, data))
+	{
+		outStream << "Failed to read temperature from file '" << device << "'" << std::endl;
 		return false;
 	}
 
