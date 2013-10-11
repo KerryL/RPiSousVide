@@ -14,7 +14,7 @@
 # See: https://projects.drogon.net/raspberry-pi/wiringpi/pins/
 #pumpPin = 0
 #heaterPin = 1
-sensorID = 28-000000000000
+#sensorID = # ID is required only if more than one sensor is connected
 
 # Controller configuration
 # Controller form is kp * (1 + 1 / (ti * s))

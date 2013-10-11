@@ -213,12 +213,6 @@ bool SousVideConfig::IOConfigIsOK(void) const
 		ok = false;
 	}
 
-	if (io.sensorID.length() != 15)
-	{
-		outStream << "IO:  " <<GetKey(io.sensorID) << " must contain 15 characters" << std::endl;
-		ok = false;
-	}
-
 	return ok;
 }
 

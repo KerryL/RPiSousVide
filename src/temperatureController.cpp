@@ -23,7 +23,7 @@
 // Input Arguments:
 //		timeStep		= double [sec]
 //		configuration	= ControllerConfiguration
-//		sensor			= TemperatureSensor*
+//		sensor			= TemperatureSensor* DS18B20UART*?
 //		pwmOut			= PWMOutput*
 //
 // Output Arguments:
@@ -35,7 +35,7 @@
 //==========================================================================
 TemperatureController::TemperatureController(double timeStep,
 	ControllerConfiguration configuration,
-	TemperatureSensor *sensor, PWMOutput *pwmOut)
+	TemperatureSensor/*DS18B20UART*/ *sensor, PWMOutput *pwmOut)
 	: PIDController(timeStep, configuration.kp, configuration.ti, configuration.kd,
 	configuration.kf, configuration.td, configuration.tf), sensor(sensor), pwmOut(pwmOut)
 {
@@ -98,6 +98,38 @@ void TemperatureController::UpdateConfiguration(ControllerConfiguration configur
 
 //==========================================================================
 // Class:			TemperatureController
+// Function:		ReadTemperature
+//
+// Description:		Reads the actual temperature from the sensor.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for success, false otherwise
+//
+//==========================================================================
+bool TemperatureController::ReadTemperature(void)
+{
+	//TODO:  Additional stuff necessary if using DS18B20UART
+	if (sensor->GetTemperature(actualTemperature))
+	{
+		sensorOK = true;
+
+		// Convert from deg C to deg F
+		actualTemperature = actualTemperature * 1.8 + 32.0;
+	}
+	else
+		sensorOK = false;
+
+	return sensorOK;
+}
+
+//==========================================================================
+// Class:			TemperatureController
 // Function:		Reset
 //
 // Description:		Resets the integral of the error signal and initializes
@@ -115,13 +147,11 @@ void TemperatureController::UpdateConfiguration(ControllerConfiguration configur
 //==========================================================================
 void TemperatureController::Reset(void)
 {
-	if (sensor->GetTemperature(commandedTemperature))
+	if (ReadTemperature())
 	{
-		sensorOK = true;
+		commandedTemperature = actualTemperature;
 		PIDController::Reset(commandedTemperature);
 	}
-	else
-		sensorOK = false;
 }
 
 //==========================================================================
@@ -143,13 +173,8 @@ void TemperatureController::Reset(void)
 //==========================================================================
 void TemperatureController::Update(void)
 {
-	if (!sensor->GetTemperature(actualTemperature))
-		sensorOK = true;
-	else
-	{
-		sensorOK = false;
+	if (!ReadTemperature())
 		return;
-	}
 
 	if (!enabled)
 		return;

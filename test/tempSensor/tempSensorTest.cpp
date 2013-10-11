@@ -26,29 +26,42 @@ string MakeColumn(string c, unsigned int width);
 // Application entry point
 int main(int argc, char *argv[])
 {
-	if (argc < 2)
+	unsigned int i;
+	std::vector<std::string> sensorList;
+	if (argc > 1)
 	{
-		cout << "Usage:  " << argv[0] << " sensorID1 [sensorID2] ..." << endl;
-		return 1;
+		for (i = 1; i < (unsigned int)argc; i++)
+			sensorList.push_back(argv[i]);
+
+		cout << "Using " << sensorList.size() << " user-specified sensor ROMs" << endl;
+	}
+	else
+	{
+		sensorList = TemperatureSensor::GetConnectedSensors();
+		cout << "Auto-detected " << sensorList.size() << " connected sensors" << endl;
 	}
 
-	TemperatureSensor **tsArray = new TemperatureSensor*[argc - 1];
+	TemperatureSensor **tsArray = new TemperatureSensor*[sensorList.size()];
 
 	string heading1, heading2, heading3;
 	stringstream s;
 	const unsigned int columnWidth(12);
-	int i;
-	for (i = 1; i < argc; i++)
+
+	cout << endl << "Sensor list:" << endl;
+
+	for (i = 0; i < sensorList.size(); i++)
 	{
-		tsArray[i - 1] = new TemperatureSensor(argv[i]);
+		cout << "Sensor " << i << ":  " << sensorList[i] << endl;
+		tsArray[0] = new TemperatureSensor(sensorList[i]);
 
 		s.str("");
 		s << "Sensor " << i;
 		heading1.append(MakeColumn(s.str(), columnWidth));
-		heading2.append(MakeColumn("[deg F]", columnWidth));
+		heading2.append(MakeColumn("[deg C]", columnWidth));
 		heading3.append(string(columnWidth,'-'));
 	}
 
+	cout << endl;
 	cout << heading1 << endl;
 	cout << heading2 << endl;
 	cout << heading3 << endl;
@@ -56,13 +69,12 @@ int main(int argc, char *argv[])
 	clock_t start, stop;
 	double elapsed;
 	double timeStep(1.0);// [sec]
-	// TODO:  Demonstrate changing sensor resolution and using faster sample time
 	
 	while (true)
 	{
 		start = clock();
 
-		for (i = 1; i < argc; i++)
+		for (i = 1; i < (unsigned int)argc; i++)
 			cout << MakeColumn(GetReadingString(tsArray[i - 1]), columnWidth);
 		cout << endl;
 
@@ -76,7 +88,7 @@ int main(int argc, char *argv[])
 		usleep(1000000 * (timeStep - elapsed));
 	}
 
-	for (i = 1; i < argc; i++)
+	for (i = 1; i < (unsigned int)argc; i++)
 		delete tsArray[i - 1];
 	delete [] tsArray;
 

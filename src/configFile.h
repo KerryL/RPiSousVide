@@ -21,6 +21,8 @@ public:
 	virtual ~ConfigFile() {};
 
 	bool ReadConfiguration(std::string fileName);
+	bool WriteConfiguration(std::string fileName,
+		std::string field, std::string value);
 
 protected:
 	std::ostream& outStream;

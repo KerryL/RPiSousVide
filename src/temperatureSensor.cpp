@@ -10,6 +10,10 @@
 // Standard C++ headers
 #include <cstdlib>
 #include <fstream>
+#include <cassert>
+
+// *nix standard headers
+#include <dirent.h>
 
 // Local headers
 #include "temperatureSensor.h"
@@ -74,7 +78,7 @@ TemperatureSensor::TemperatureSensor(std::string deviceID,
 //		None
 //
 // Output Arguments:
-//		temperature	= double& [deg F]
+//		temperature	= double& [deg C]
 //
 // Return Value:
 //		bool, true for success, false otherwise
@@ -122,8 +126,90 @@ bool TemperatureSensor::GetTemperature(double &temperature) const
 		return false;
 	}
 
-	temperature = atof(data.substr(start + 2).c_str()) / 1000.0 * 9.0 / 5.0 + 32.0;
+	temperature = atof(data.substr(start + 2).c_str()) / 1000.0;
 	// TODO:  Allow calibration?
 
 	return true;
+}
+
+//==========================================================================
+// Class:			TemperatureSensor
+// Function:		GetTemperature
+//
+// Description:		Reads current temperature from DS18B20 sensor.
+//
+// Input Arguments:
+//		searchDirectory	= std::string (optional)
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		std::vector<std::string>
+//
+//==========================================================================
+std::vector<std::string> TemperatureSensor::GetConnectedSensors(std::string searchDirectory)
+{
+	system("modprobe w1-gpio");
+	system("modprobe w1-therm");
+
+	std::vector<std::string> deviceList;
+
+	// Initially, populate deviceList with all directories under searchDirectory
+	DIR *directory = opendir(searchDirectory.c_str());
+	if (!directory)
+	{
+		std::cout << "Failed to open directory file for '" << searchDirectory << "'" << std::endl;
+		return deviceList;
+	}
+
+	struct dirent* listing;
+	while (listing = readdir(directory), listing != NULL)
+	{
+#ifdef _DIRENT_HAVE_D_TYPE
+		// Make sure we're a directory (not available on all systems)
+		if (listing->d_type == DT_DIR)
+#endif
+			deviceList.push_back(listing->d_name);
+	}
+
+	if (closedir(directory) == -1)
+	{
+		std::cout << "Failed to close directory file" << std::endl;
+	}
+
+	unsigned int i;
+	for (i = 0; i < deviceList.size(); i++)
+	{
+		if (!TemperatureSensor::DeviceIsDS18B20(deviceList[i]))
+		{
+			deviceList.erase(deviceList.begin() + i);
+			i--;
+		}
+	}
+
+	return deviceList;
+}
+
+//==========================================================================
+// Class:			TemperatureSensor
+// Function:		GetTemperature
+//
+// Description:		Reads current temperature from DS18B20 sensor.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		temperature	= double& [deg F]
+//
+// Return Value:
+//		bool, true for success, false otherwise
+//
+//==========================================================================
+bool TemperatureSensor::DeviceIsDS18B20(std::string rom)
+{
+	assert(rom.length() > 2);
+
+	return rom.substr(0, 2).compare("28") == 0;
 }

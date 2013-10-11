@@ -23,6 +23,7 @@
 #include "networkInterface.h"
 #include "gpio.h"
 #include "temperatureSensor.h"
+//#include "ds18b20UART.h"
 #include "pwmOutput.h"
 #include "temperatureController.h"
 #include "combinedLogger.h"
@@ -123,15 +124,43 @@ SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger())
 		exit(1);
 	}
 
+	std::string sensorID(configuration.io.sensorID);
+	if (sensorID.empty())
+	{
+		std::vector<std::string> sensorList = TemperatureSensor::GetConnectedSensors();
+		/*if (!DS18B20UART::SearchROMs(sensorList))
+		{
+			CombinedLogger::GetLogger() << "Failed to complete temperature sensor ROM search.  Exiting..." << std::endl;
+			exit(1);
+		}*/
+
+		if (sensorList.size() == 0)
+		{
+			CombinedLogger::GetLogger() << "No temperature sensor connected.  Exiting..." << std::endl;
+			exit(1);
+		}
+		else if (sensorList.size() > 1)
+		{
+			CombinedLogger::GetLogger() << "Multiple temperature sensors detected.  "
+				<< "Sensor ID must be specified in config file (use field 'sensorID')." << std::endl;
+			exit(1);
+		}
+
+		sensorID = sensorList[0];
+	}
+
 	if (autoTune)
+	{
+		CombinedLogger::GetLogger() << "System started in auto-tune mode" << std::endl;
 		nextState = StateAutoTune;
+	}
 
 	sendClientMessage = false;
 
 	ni = new NetworkInterface(configuration.network);
 	controller = new TemperatureController(1.0 / configuration.system.activeFrequency,
 		configuration.controller,
-		new TemperatureSensor(configuration.io.sensorID, CombinedLogger::GetLogger()),
+		new TemperatureSensor/*DS18B20UART*/(sensorID, CombinedLogger::GetLogger()),
 		new PWMOutput(configuration.io.heaterRelayPin));
 	controller->SetRateLimit(configuration.system.maxHeatingRate);
 	pumpRelay = new GPIO(configuration.io.pumpRelayPin, GPIO::DirectionOutput);
@@ -777,6 +806,7 @@ void SousVide::ExitState(void)
 			CombinedLogger::GetLogger() << "  Ambient Temp. = " << tuner.GetAmbientTemperature() << " deg F" << std::endl;
 
 			// TODO:  Automatically adopt these gains? Save to config file?
+			// Can use configuration.WriteConfiguration(configFileName, "fieldName", "fieldValue"); to accomplish this
 			
 			std::vector<double> control(time.size(), 1.0), simTemp;
 			if (!tuner.GetSimulatedOpenLoopResponse(time, control, simTemp, temp[0]))

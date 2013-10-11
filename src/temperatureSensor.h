@@ -12,6 +12,7 @@
 
 // Standard C++ headers
 #include <string>
+#include <vector>
 #include <ostream>
 #include <iostream>
 
@@ -21,7 +22,11 @@ public:
 	TemperatureSensor(std::string deviceID, std::ostream& outStream = std::cout,
 		std::string baseDirectory = "/sys/bus/w1/devices/");
 
-	bool GetTemperature(double &temperature) const;
+	bool GetTemperature(double &temperature) const;// [deg C]
+
+	static std::vector<std::string> GetConnectedSensors(
+		std::string searchDirectory = "/sys/bus/w1/devices/");
+	static bool DeviceIsDS18B20(std::string rom);
 
 private:
 	static bool initialized;

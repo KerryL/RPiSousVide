@@ -12,14 +12,14 @@
 
 // Local forward declarations
 class ControllerConfiguration;
-class TemperatureSensor;
+class TemperatureSensor;//DS18B20UART;
 class PWMOutput;
 
 class TemperatureController : private PIDController
 {
 public:
 	TemperatureController(double timeStep, ControllerConfiguration configuration,
-		TemperatureSensor *sensor, PWMOutput *pwmOut);
+		TemperatureSensor/*DS18B20UART*/ *sensor, PWMOutput *pwmOut);
 	~TemperatureController();
 
 	void Reset(void);
@@ -41,7 +41,7 @@ public:
 	bool OutputIsSaturated(void) const;
 
 private:
-	TemperatureSensor* const sensor;
+	TemperatureSensor*/*DS18B20UART**/ const sensor;
 	PWMOutput* const pwmOut;
 
 	bool enabled;
@@ -51,6 +51,8 @@ private:
 	double plateauTemperature;// [deg F]
 	double commandedTemperature;// [deg F]
 	double actualTemperature;// [deg F]
+
+	bool ReadTemperature(void);
 };
 
 #endif// TEMPERATURE_CONTROLLER_H_

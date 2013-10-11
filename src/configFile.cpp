@@ -5,9 +5,12 @@
 // Desc:  Generic (abstract) config file class.
 
 // Standard C++ headers
+#include <cstdio>
 #include <fstream>
 #include <algorithm>
 #include <sstream>
+#include <cerrno>
+#include <cstring>
 
 // Local headers
 #include "configFile.h"
@@ -62,31 +65,114 @@ bool ConfigFile::ReadConfiguration(std::string fileName)
 		return false;
 	}
 
-	std::string line;
-	std::string field;
-	std::string data;
+	std::string line, field, data;
 	size_t inLineComment;
 
 	while (std::getline(file, line))
 	{
-		if (line.empty())
+		if (line.empty() ||
+			commentCharacter.compare(line.substr(0,1)) == 0)
 			continue;
 
-		if (commentCharacter.compare(line.substr(0,1)) != 0
-			&& line.find(" ") != std::string::npos)
-		{
-			inLineComment = line.find(commentCharacter);
-			if (inLineComment != std::string::npos)
-				line = line.substr(0, inLineComment);
+		inLineComment = line.find(commentCharacter);
+		if (inLineComment != std::string::npos)
+			line = line.substr(0, inLineComment);
 
-			SplitFieldFromData(line, field, data);
-			ProcessConfigItem(field, data);
-		}
+		SplitFieldFromData(line, field, data);
+		ProcessConfigItem(field, data);
 	}
 
 	file.close();
 
 	return ConfigIsOK();
+}
+
+//==========================================================================
+// Class:			ConfigFile
+// Function:		WriteConfiguration
+//
+// Description:		Writes the specified field to the config file.  Maintains
+//					existing whitespace, comments, formatting, etc.
+//
+// Input Arguments:
+//		fileName	= std::string
+//		field		= std::string
+//		value		= std::string
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for success, false otherwise
+//
+//==========================================================================
+bool ConfigFile::WriteConfiguration(std::string fileName,
+	std::string field, std::string value)
+{
+	std::ifstream inFile(fileName.c_str(), std::ios::in);
+	if (!inFile.is_open() || !inFile.good())
+	{
+		outStream << "Failed to open '" << fileName << "'" << std::endl;
+		return false;
+	}
+
+	std::string tempFileName("tempConfigFile");
+	std::ofstream outFile(tempFileName.c_str(), std::ios::out);
+	if (!outFile.is_open() || !outFile.good())
+	{
+		outStream << "Failed to open '" << tempFileName << "'" << std::endl;
+		return false;
+	}
+
+	std::string line, comment, currentField, data;
+	size_t inLineComment;
+
+	bool written(false);
+	while (std::getline(inFile, line))
+	{
+		if (!written && !line.empty() &&
+			commentCharacter.compare(line.substr(0,1)) != 0)
+		{
+			inLineComment = line.find(commentCharacter);
+			if (inLineComment != std::string::npos)
+			{
+				comment = line.substr(inLineComment);
+				line = line.substr(0, inLineComment);
+			}
+			else
+				comment.clear();
+
+			SplitFieldFromData(line, currentField, data);
+			if (currentField.compare(field) == 0)
+			{
+				line = field + " = " + value;
+				written = true;
+			}
+		}
+
+		outFile << line << comment << std::endl;
+	}
+
+	if (!written)
+		outFile << field + " = " + value << std::endl;
+
+	inFile.close();
+	outFile.close();
+	if (std::remove(fileName.c_str()) == -1)
+	{
+		outStream << "Failed to delete '" << fileName
+			<< "':  " << std::strerror(errno) << std::endl;
+		return false;
+	}
+
+	if (std::rename(tempFileName.c_str(), fileName.c_str()) == -1)
+	{
+		outStream << "Failed to rename '" << tempFileName
+			<< "' to '" << fileName << "':  " << std::strerror(errno) << std::endl;
+		return false;
+	}
+
+	return true;
 }
 
 //==========================================================================
