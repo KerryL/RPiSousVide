@@ -164,13 +164,17 @@ std::vector<std::string> TemperatureSensor::GetConnectedSensors(std::string sear
 	}
 
 	struct dirent* listing;
+	std::string name;
 	while (listing = readdir(directory), listing != NULL)
 	{
+		name = listing->d_name;
+		if (name.length() == 15 &&
 #ifdef _DIRENT_HAVE_D_TYPE
-		// Make sure we're a directory (not available on all systems)
-		if (listing->d_type == DT_DIR)
+			// Make sure we're a directory (not available on all systems)
+			//listing->d_type == DT_DIR &&// TODO:  Fix this -> why doesn't it work (uncommenting prevents adding sensor to list)
 #endif
-			deviceList.push_back(listing->d_name);
+			name[2] == '-')
+			deviceList.push_back(name);
 	}
 
 	if (closedir(directory) == -1)
@@ -181,6 +185,7 @@ std::vector<std::string> TemperatureSensor::GetConnectedSensors(std::string sear
 	unsigned int i;
 	for (i = 0; i < deviceList.size(); i++)
 	{
+		std::cout << deviceList[i] << std::endl;
 		if (!TemperatureSensor::DeviceIsDS18B20(deviceList[i]))
 		{
 			deviceList.erase(deviceList.begin() + i);

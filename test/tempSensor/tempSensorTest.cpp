@@ -41,6 +41,12 @@ int main(int argc, char *argv[])
 		cout << "Auto-detected " << sensorList.size() << " connected sensors" << endl;
 	}
 
+	if (sensorList.size() == 0)
+	{
+		cout << "No valid sensors detected" << endl;
+		return 1;
+	}
+
 	TemperatureSensor **tsArray = new TemperatureSensor*[sensorList.size()];
 
 	string heading1, heading2, heading3;
