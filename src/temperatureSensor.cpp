@@ -134,9 +134,9 @@ bool TemperatureSensor::GetTemperature(double &temperature) const
 
 //==========================================================================
 // Class:			TemperatureSensor
-// Function:		GetTemperature
+// Function:		GetConnectedSensors
 //
-// Description:		Reads current temperature from DS18B20 sensor.
+// Description:		Returns vector of connected DS18B20 sensors.
 //
 // Input Arguments:
 //		searchDirectory	= std::string (optional)
@@ -167,12 +167,10 @@ std::vector<std::string> TemperatureSensor::GetConnectedSensors(std::string sear
 	std::string name;
 	while (listing = readdir(directory), listing != NULL)
 	{
+		// We could add a check here to make sure the listing is a directory,
+		// but it's probably not necessary
 		name = listing->d_name;
 		if (name.length() == 15 &&
-#ifdef _DIRENT_HAVE_D_TYPE
-			// Make sure we're a directory (not available on all systems)
-			//listing->d_type == DT_DIR &&// TODO:  Fix this -> why doesn't it work (uncommenting prevents adding sensor to list)
-#endif
 			name[2] == '-')
 			deviceList.push_back(name);
 	}

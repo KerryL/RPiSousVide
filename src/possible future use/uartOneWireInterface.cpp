@@ -48,8 +48,8 @@ const unsigned char UARTOneWireInterface::matchROMCommand = 0x55;
 const unsigned char UARTOneWireInterface::skipROMCommand = 0xCC;
 const unsigned char UARTOneWireInterface::alarmSearchCommand = 0xEC;
 
-std::ostream& outStream = std::cout;
-std::string ttyFile = "/dev/ttyS0";
+std::ostream& UARTOneWireInterface::outStream = std::cout;
+std::string UARTOneWireInterface::ttyFile = "/dev/ttyS0";
 unsigned int UARTOneWireInterface::deviceCount = 0;
 int UARTOneWireInterface::serialFile = -1;
 
@@ -315,7 +315,7 @@ bool UARTOneWireInterface::FindAllDevicesWithCommand(
 		return false;
 
 	unsigned int i, j;
-	unsigned long long value;
+	uint64_t value;
 	std::stringstream ss;
 	for (i = 0; i < localROMs.size(); i++)
 	{
@@ -689,7 +689,7 @@ unsigned char UARTOneWireInterface::ComputeCRC(const std::string &s,
 	assert(s.length() % 2 == 0);// 8-bit CRC requires even number of hex characters
 
 	unsigned int i, j;
-	unsigned long long value;
+	uint64_t value;
 	std::stringstream ss;
 	if (reverseInput)
 	{

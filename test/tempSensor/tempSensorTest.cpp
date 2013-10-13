@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < sensorList.size(); i++)
 	{
 		cout << "Sensor " << i << ":  " << sensorList[i] << endl;
-		tsArray[0] = new TemperatureSensor(sensorList[i]);
+		tsArray[i] = new TemperatureSensor(sensorList[i]);
 
 		s.str("");
 		s << "Sensor " << i;
@@ -80,8 +80,8 @@ int main(int argc, char *argv[])
 	{
 		start = clock();
 
-		for (i = 1; i < (unsigned int)argc; i++)
-			cout << MakeColumn(GetReadingString(tsArray[i - 1]), columnWidth);
+		for (i = 0; i < sensorList.size(); i++)
+			cout << MakeColumn(GetReadingString(tsArray[i]), columnWidth);
 		cout << endl;
 
 		stop = clock();
@@ -94,8 +94,8 @@ int main(int argc, char *argv[])
 		usleep(1000000 * (timeStep - elapsed));
 	}
 
-	for (i = 1; i < (unsigned int)argc; i++)
-		delete tsArray[i - 1];
+	for (i = 0; i < sensorList.size(); i++)
+		delete tsArray[i];
 	delete [] tsArray;
 
 	return 0;

@@ -44,7 +44,7 @@ AR = arm-unknown-linux-gnueabi-ar rcs
 RANLIB = arm-unknown-linux-gnueabi-ranlib
 
 # Compiler flags
-CFLAGS = -g -Wall -Wextra -Werror -pedantic $(INCDIRS)
+CFLAGS = -g -Wall -Wextra -Werror -pedantic -std=c++0x $(INCDIRS)
 
 # Linker flags
 LDFLAGS = $(LIBDIRS) $(LIBS)
