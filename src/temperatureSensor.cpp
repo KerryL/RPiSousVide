@@ -109,7 +109,7 @@ bool TemperatureSensor::GetTemperature(double &temperature) const
 
 	if (data.substr(data.length() - 3).compare("YES") != 0)
 	{
-		outStream << "Temperature reading does not end in 'YES'" << std::endl;
+		outStream << "Bad checksum" << std::endl;
 		return false;
 	}
 

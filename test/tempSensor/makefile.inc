@@ -24,7 +24,7 @@ LIBDIRS = $(addprefix -L,$(LIBDIRS_TEMP))
 # DO NOT include the -l prefix to these libraries - it
 # will be added automatically
 LIBS_TEMP = \
-	
+	rt
 
 LIBS = $(addprefix -l,$(LIBS_TEMP))
 

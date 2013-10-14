@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <cassert>
+#include <time.h>
 
 // *nix standard headers
 #include <unistd.h>
@@ -67,32 +68,63 @@ int main(int argc, char *argv[])
 		heading3.append(string(columnWidth,'-'));
 	}
 
+	struct timespec start, stop, loopStart, loopStop;
+	double elapsed;
+	double timeStep(0.85);// [sec]
+
+	cout << "Sensor readings will be taken every " << timeStep << " seconds." << endl;
+	cout << "Reading frequency with the built-in system method is limited to one sensor every 750 msec (+overhead for reading from sensor)" << endl;
+
 	cout << endl;
 	cout << heading1 << endl;
 	cout << heading2 << endl;
 	cout << heading3 << endl;
 
-	clock_t start, stop;
-	double elapsed;
-	double timeStep(1.0);// [sec]
-	
-	while (true)
+	if (clock_gettime(CLOCK_MONOTONIC, &loopStart) == -1)
 	{
-		start = clock();
+		cout << "clock_gettime failed" << endl;
+		return 1;
+	}
 
-		for (i = 0; i < sensorList.size(); i++)
-			cout << MakeColumn(GetReadingString(tsArray[i]), columnWidth);
-		cout << endl;
+	const unsigned int readings(10);
+	for (i = 0; i < readings * sensorList.size(); i++)
+	{
+		if (clock_gettime(CLOCK_MONOTONIC, &start) == -1)
+		{
+			cout << "clock_gettime failed" << endl;
+			return 1;
+		}
 
-		stop = clock();
+		cout << MakeColumn(GetReadingString(tsArray[i % sensorList.size()]), columnWidth);
+		cout.flush();
+
+		if (i % sensorList.size() == sensorList.size() - 1)
+			cout << endl;
+
+		if (clock_gettime(CLOCK_MONOTONIC, &stop) == -1)
+		{
+			cout << "clock_gettime failed" << endl;
+			return 1;
+		}
 
 		// Handle overflows
-		elapsed = double(stop - start) / (double)(CLOCKS_PER_SEC);
-		if (stop < start || elapsed > timeStep)
+		elapsed = stop.tv_sec - start.tv_sec + (stop.tv_nsec - start.tv_nsec) * 1.0e-9;
+		if (elapsed > timeStep)
 			continue;
 
 		usleep(1000000 * (timeStep - elapsed));
 	}
+
+	if (clock_gettime(CLOCK_MONOTONIC, &loopStop) == -1)
+	{
+		cout << "clock_gettime failed" << endl;
+		return 1;
+	}
+
+	elapsed = loopStop.tv_sec - loopStart.tv_sec + (loopStop.tv_nsec - loopStart.tv_nsec) * 1.0e-9;
+
+	cout << "Average actual read time:  ";
+	cout << elapsed / double(readings * sensorList.size()) << " sec" << endl;
 
 	for (i = 0; i < sensorList.size(); i++)
 		delete tsArray[i];
@@ -107,8 +139,9 @@ string GetReadingString(TemperatureSensor *ts)
 
 	double temp;
 	stringstream s;
+	s.precision(3);
 	if (ts->GetTemperature(temp))
-		s << setprecision(4) << temp;
+		s << fixed << temp;
 	else
 		s << "Error";
 
