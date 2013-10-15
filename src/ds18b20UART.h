@@ -44,6 +44,8 @@ public:
 
 	bool ReadPowerSupply(PowerSupply& powerMode) const;
 	bool ConvertTemperature(void) const;
+	static bool BroadcastConvertTemperature(void);
+	bool WaitForConversionComplete(void) const;
 
 	bool SaveConfigurationToEEPROM(void) const;
 	bool LoadConfigurationFromEEPROM(void) const;

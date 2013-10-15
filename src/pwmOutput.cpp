@@ -52,10 +52,13 @@ const unsigned int PWMOutput::maxRange = 4096;
 //		None
 //
 //==========================================================================
-PWMOutput::PWMOutput(int pin, PWMMode mode) : GPIO(pin, DirectionPWMOutput), frequency(285700.0), range(1024)// TODO:  Get better frequency estimate
+PWMOutput::PWMOutput(int pin, PWMMode mode) : GPIO(pin, DirectionPWMOutput)
 {
 	SetDutyCycle(0.0);
 	SetMode(mode);
+
+	range = 1024;
+	frequency = pwmClockFrequency / range / minClockDivisor;// TODO:  Verify default clock divisor is 2
 }
 
 //==========================================================================
@@ -241,8 +244,6 @@ bool PWMOutput::SetFrequency(double frequency, unsigned int minResolution)
 unsigned int PWMOutput::GetMinimumAcceptableFactor(unsigned int i) const
 {
 	// We're going to use a naieve approach with special stop condition
-	// TODO:  Improve the speed here (may or may not be acceptable for large values of i)
-
 	unsigned int f(1);
 	while (f++, (i % f != 0 || i / f > maxRange) && f <= maxClockDivisor) {}
 

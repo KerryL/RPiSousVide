@@ -13,7 +13,8 @@ DIRS = \
 # Source files
 SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
 	.src/gpio.cpp \
-	.src/pwmOutput.cpp
+	.src/pwmOutput.cpp \
+	.src/timingUtility.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
@@ -28,6 +29,7 @@ copy:
 	$(MKDIR) .src/
 	cp ../../src/gpio.cpp .src/
 	cp ../../src/pwmOutput.cpp .src/
+	cp ../../src/timingUtility.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

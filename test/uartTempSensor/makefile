@@ -13,7 +13,8 @@ DIRS = \
 # Source files
 SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
 	.src/ds18b20UART.cpp \
-	.src/uartOneWireInterface.cpp
+	.src/uartOneWireInterface.cpp \
+	.src/timingUtility.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
@@ -26,6 +27,7 @@ copy:
 	$(MKDIR) .src/
 	cp ../../src/ds18b20UART.cpp .src/
 	cp ../../src/uartOneWireInterface.cpp .src/
+	cp ../../src/timingUtility.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

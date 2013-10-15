@@ -12,7 +12,8 @@ DIRS = \
 
 # Source files
 SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
-	.src/temperatureSensor.cpp
+	.src/temperatureSensor.cpp \
+	.src/timingUtility.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
@@ -24,6 +25,7 @@ all: $(TARGET)
 copy:
 	$(MKDIR) .src/
 	cp ../../src/temperatureSensor.cpp .src/
+	cp ../../src/timingUtility.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

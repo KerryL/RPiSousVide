@@ -61,10 +61,8 @@ const unsigned char DS18B20UART::readPowerSupplyCommand = 0xB4;
 //
 //==========================================================================
 DS18B20UART::DS18B20UART(const std::string &rom, std::ostream& outStream)
-	: UARTOneWireInterface(rom)
+	: UARTOneWireInterface(rom, outStream)
 {
-//	this->outStream = outStream;// TODO:  Fix this
-
 	if (!FamilyMatchesROM(familyCode))
 	{
 		outStream << "Specified ROM (" << rom << ") does not match family code (0x"
@@ -253,6 +251,56 @@ bool DS18B20UART::ConvertTemperature(void) const
 		!Write(convertTCommand))
 		return false;
 
+	if (!WaitForConversionComplete())
+		return false;
+
+	return true;
+}
+
+//==========================================================================
+// Class:			DS18B20UART
+// Function:		BroadcastConvertTemperature
+//
+// Description:		Signals all attached DS18B20s to read current temperature
+//					and store result in scratch pad.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		true for success, false otherwise
+//
+//==========================================================================
+bool DS18B20UART::BroadcastConvertTemperature(void)
+{
+	if (!Write(skipROMCommand) ||
+		!Write(convertTCommand))
+		return false;
+
+	return true;
+}
+
+//==========================================================================
+// Class:			DS18B20UART
+// Function:		WaitForConversionComplete
+//
+// Description:		Waits for the current conversion to complete.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		true for success, false otherwise
+//
+//==========================================================================
+bool DS18B20UART::WaitForConversionComplete(void) const
+{
 	if (powerMode == PowerSupplyExternal)
 	{
 		if (!WaitForReadOne())

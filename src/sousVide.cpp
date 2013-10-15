@@ -113,7 +113,8 @@ const std::string SousVide::plotFileName = "temperaturePlot.png";
 //		None
 //
 //==========================================================================
-SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger())
+SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger()),
+	loopTimer(1.0, CombinedLogger::GetLogger())
 {
 	state = StateOff;
 	nextState = state;
@@ -244,16 +245,16 @@ void SousVide::PrintUsageInfo(std::string name)
 //==========================================================================
 void SousVide::Run()
 {
-	clock_t start, stop;
-	double elapsed(timeStep);// [sec]
+	loopTimer.SetLoopTime(1.0 / configuration.system.idleFrequency);
 	FrontToBackMessage receivedMessage;
 
 	while (true)
 	{
-		start = clock();
+		if (!loopTimer.TimeLoop())
+			outStream << "Warning:  Main loop timing failed" << std::endl;
 
 		if (maxElements > 0)
-			UpdateTimingStatistics(elapsed);
+			UpdateTimingStatistics(loopTimer.GetLastLoopTime());
 
 		// Do the core work for the application
 		if (ni->ReceiveData(receivedMessage))
@@ -268,16 +269,6 @@ void SousVide::Run()
 				CombinedLogger::GetLogger() << "Failed to send message to client(s)" << std::endl;
 			sendClientMessage = false;
 		}
-
-		stop = clock();
-
-		elapsed = double(stop - start) / (double)CLOCKS_PER_SEC;
-
-		// Handle overflows
-		if (stop < start || elapsed > timeStep)
-			continue;
-
-		usleep(1000000 * (timeStep - elapsed));
 	}
 }
 
@@ -546,15 +537,16 @@ void SousVide::EnterState(void)
 	}
 	else if (state == StateInitializing)
 	{
+		NetworkConfiguration oldNetworkConfig = configuration.network;
+		IOConfiguration oldIOConfig = configuration.io;
 		if (ReadConfiguration())
 		{
-			// TODO:  Warn user about setting that don't immediately take effect
-			/*if (configuration.network.port != )
+			if (configuration.network.port != oldNetworkConfig.port)
 				CombinedLogger::GetLogger() << "Network port number change will take effect next time the application is started" << std::endl;
-			if (configuration.io.pumpPin != ||
-				configuration.io.heaterPin != ||
-				configuration.io.sensorID != )
-				CombinedLogger::GetLogger() << "I/O configuration changes will take effect next time the application is started" << std::endl;*/
+			if (configuration.io.pumpPin != oldIOConfig.pumpPin ||
+				configuration.io.heaterPin != oldIOConfig.heaterPin ||
+				configuration.io.sensorID != oldIOConfig.sensorID)
+				CombinedLogger::GetLogger() << "I/O configuration changes will take effect next time the application is started" << std::endl;
 
 			controller->UpdateConfiguration(configuration.controller);
 			// Everything else is read directly from the configuration
@@ -567,7 +559,7 @@ void SousVide::EnterState(void)
 			nextState = StateError;
 		}
 
-		timeStep = 1.0 / configuration.system.idleFrequency;
+		loopTimer.SetLoopTime(1.0 / configuration.system.idleFrequency);
 	}
 	else if (state == StateReady)
 	{
@@ -805,14 +797,19 @@ void SousVide::ExitState(void)
 			CombinedLogger::GetLogger() << "  Max. Heat Rate = " << tuner.GetMaxHeatRate() << " deg F/sec" << std::endl;
 			CombinedLogger::GetLogger() << "  Ambient Temp. = " << tuner.GetAmbientTemperature() << " deg F" << std::endl;
 
-			// TODO:  Automatically adopt these gains? Save to config file?
-			// Can use configuration.WriteConfiguration(configFileName, "fieldName", "fieldValue"); to accomplish this
+			CombinedLogger::GetLogger() << "Writing new gains and heat rate to config file" << std::endl;
+			configuration.WriteConfiguration(configFileName, "kp", tuner.GetKp());
+			configuration.WriteConfiguration(configFileName, "ti", tuner.GetTi());
+			configuration.WriteConfiguration(configFileName, "kf", tuner.GetKf());
+			configuration.WriteConfiguration(configFileName, "maxHeatingRate", tuner.GetMaxHeatRate());
 			
 			std::vector<double> control(time.size(), 1.0), simTemp;
 			if (!tuner.GetSimulatedOpenLoopResponse(time, control, simTemp, temp[0]))
 				CombinedLogger::GetLogger() << "Simulation failed" << std::endl;
 
-			// TODO:  Clean this up - this is a little sloppy
+			// This is probably only necessary for verification of operation/debuggin and should
+			// be removed after we're sure everything is OK
+			// TODO:  Remove this bit here
 			std::ofstream file("autoTuneSimulation.log", std::ios::out);
 			if (!file.is_open() || !file.good())
 			{
@@ -827,7 +824,7 @@ void SousVide::ExitState(void)
 			for (i = 0; i < time.size(); i++)
 				file << time[i] << "," << temp[i] << "," << simTemp[i] << std::endl;
 
-			file.close();
+			file.close();//*/
 		}
 		else
 			CombinedLogger::GetLogger() << "Auto-tune failed" << std::endl;
@@ -895,7 +892,7 @@ std::string SousVide::GetStateName(void) const
 //==========================================================================
 void SousVide::EnterActiveState(void)
 {
-	timeStep = 1.0 / configuration.system.activeFrequency;
+	loopTimer.SetLoopTime(1.0 / configuration.system.activeFrequency);
 	pumpRelay->SetOutput(true);
 	controller->SetOutputEnable(true);
 }
@@ -919,7 +916,7 @@ void SousVide::EnterActiveState(void)
 //==========================================================================
 void SousVide::ExitActiveState(void)
 {
-	timeStep = 1.0 / configuration.system.idleFrequency;
+	loopTimer.SetLoopTime(1.0 / configuration.system.idleFrequency);
 	pumpRelay->SetOutput(false);
 	controller->SetOutputEnable(false);
 }
@@ -1221,8 +1218,14 @@ void SousVide::UpdateTimingStatistics(double elapsed)
 {
 	// TODO:  This can be improved by breaking active and idle times apart and
 	// reporting statistics independently for each category
-	clock_t now(clock());
-	double totalElapsed = double(now - lastUpdate) / (double)CLOCKS_PER_SEC;
+	struct timespec now;
+	if (!TimingUtility::GetCurrentTime(now))
+	{
+		outStream << "Warning:  Failed to update time while calculating timing statistics" << std::endl;
+		return;
+	}
+
+	double totalElapsed = TimingUtility::TimespecToSeconds(TimingUtility::GetDeltaTime(now, lastUpdate));
 	lastUpdate = now;
 
 	if (frameTimes.size() < maxElements)
@@ -1395,8 +1398,7 @@ void SousVide::UpdatePlotFile(void)
 	plotter->PlotYAgainstX(1, plotTime, plotActualTemperature, "title \"Actual\" ls 2 with lines");
 
 	plotter->SendCommand("replot");
-
-	// TODO:  Do we need to do anything to ensure the plot file is written here?
+	plotter->WaitForWaitForGNUPlot();
 
 	plotTime.clear();
 	plotCommandedTemperature.clear();

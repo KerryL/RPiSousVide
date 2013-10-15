@@ -18,11 +18,14 @@
 
 // Local headers
 #include "ds18b20UART.h"
+#include "timingUtility.h"
 
 using namespace std;
 
 string GetReadingString(DS18B20UART *ts);
 string MakeColumn(string c, unsigned int width);
+void DoTimedLoop(double timeStep, unsigned int readingCount,
+	const vector<string> &roms, DS18B20UART **tsArray, unsigned int columnWidth);
 
 // Structure for storing information about connected sensors
 struct eeParams
@@ -51,9 +54,7 @@ int main(int, char*[])
 
 	unsigned int i;
 	for (i = 0; i < roms.size(); i++)
-	{
 		cout << roms[i] << endl;
-	}
 
 	DS18B20UART **tsArray = new DS18B20UART*[roms.size()];
 
@@ -81,10 +82,6 @@ int main(int, char*[])
 				cout << "Failed to set resolution to 12-bit" << endl;
 		}
 	}
-
-	double timeStep(1.0);// [sec]
-	cout << endl << endl;
-	cout << "Reading from sensors every " << timeStep << " seconds, with resolution = 12-bit" << endl << endl;
 	
 	string heading1, heading2, heading3;
 	stringstream s;
@@ -99,32 +96,17 @@ int main(int, char*[])
 		heading2.append(MakeColumn("[deg C]", columnWidth));
 		heading3.append(string(columnWidth,'-'));
 	}
+	s.str("");
+	s << heading1 << endl;
+	s << heading2 << endl;
+	s << heading3 << endl;
 
-	cout << heading1 << endl;
-	cout << heading2 << endl;
-	cout << heading3 << endl;
+	const unsigned int readingCount(10);
 
-	clock_t start, stop;
-	double elapsed;
-	
-	int reading;
-	for (reading = 0; reading < 10; reading++)
-	{
-		start = clock();
-
-		for (i = 1; i < roms.size(); i++)
-			cout << MakeColumn(GetReadingString(tsArray[i - 1]), columnWidth);
-		cout << endl;
-
-		stop = clock();
-
-		// Handle overflows
-		elapsed = double(stop - start) / (double)(CLOCKS_PER_SEC);
-		if (stop < start || elapsed > timeStep)
-			continue;
-
-		usleep(1000000 * (timeStep - elapsed));
-	}
+	cout << endl << endl;
+	cout << "Resolution = 12-bit" << endl << endl;
+	cout << s;
+	DoTimedLoop(0.8, readingCount, roms, tsArray, columnWidth);
 
 	for (i = 0; i < roms.size(); i++)
 	{
@@ -132,35 +114,13 @@ int main(int, char*[])
 			cout << "Failed to set resolution to 9-bit" << endl;
 	}
 
-	timeStep = 0.1;// [sec]
 	cout << endl << endl;
-	cout << "Reading from sensors every " << timeStep << " seconds, with resolution = 9-bit" << endl << endl;
-
-	cout << heading1 << endl;
-	cout << heading2 << endl;
-	cout << heading3 << endl;
-	
-	for (reading = 0; reading < 10; reading++)
-	{
-		start = clock();
-
-		for (i = 1; i < roms.size(); i++)
-			cout << MakeColumn(GetReadingString(tsArray[i - 1]), columnWidth);
-		cout << endl;
-
-		stop = clock();
-
-		// Handle overflows
-		elapsed = double(stop - start) / (double)(CLOCKS_PER_SEC);
-		if (stop < start || elapsed > timeStep)
-			continue;
-
-		usleep(1000000 * (timeStep - elapsed));
-	}
+	cout << "Resolution = 9-bit" << endl << endl;
+	cout << s;
+	DoTimedLoop(0.1, readingCount, roms, tsArray, columnWidth);
 
 	// Additional Things to check:
-	// Read temperature (for 10 seconds? 10 readings?)
-	// Change resolution and alarm
+	// Change alarm
 	// Read scratch pad to ensure settings took effect
 	// Restore from EEPROM
 	// Display new scratch pad
@@ -175,11 +135,56 @@ int main(int, char*[])
 
 	// TODO:  Restore original settings (after we start changing/saving EEPROM)
 
-	for (i = 1; i < roms.size(); i++)
-		delete tsArray[i - 1];
+	for (i = 0; i < roms.size(); i++)
+		delete tsArray[1];
 	delete [] tsArray;
 
 	return 0;
+}
+
+void DoTimedLoop(double timeStep, unsigned int readingCount,
+	const vector<string> &roms, DS18B20UART **tsArray, unsigned int columnWidth)
+{
+	cout << "Reading from sensors every " << timeStep << " seconds" << endl;
+	TimingUtility loopTimer(timeStep);
+	unsigned int reading, i;
+	for (reading = 0; reading < readingCount; reading++)
+	{
+		loopTimer.TimeLoop();
+
+		// NOTE:  Both broadcast and normal methods are shown here
+		//        For a single sensor, both methods are valid, but
+		//        for multiple sensors, it may be desired to use the
+		//        broadcast method, since it allows the sensors to
+		//        update the temperature measurements in parallel.
+		if (roms.size() > 1)
+		{
+			if (!DS18B20UART::BroadcastConvertTemperature())
+			{
+				cout << "Failed to broadcast convert command" << endl;
+				continue;
+			}
+			else if (!tsArray[0]->WaitForConversionComplete())
+			{
+				cout << "Failed to wait for broadcast convert command to complete" << endl;
+				continue;
+			}
+		}
+
+		for (i = 0; i < roms.size(); i++)
+		{
+			if (roms.size() == 1)
+			{
+				if (!tsArray[i]->ConvertTemperature())
+				{
+					cout << "Failed to issue convert command for sensor " << i << endl;
+					continue;
+				}
+			}
+			cout << MakeColumn(GetReadingString(tsArray[i]), columnWidth);
+		}
+		cout << endl;
+	}
 }
 
 string GetReadingString(DS18B20UART *ts)
@@ -187,7 +192,7 @@ string GetReadingString(DS18B20UART *ts)
 	assert(ts);
 
 	stringstream s;
-	if (ts->ConvertTemperature() && ts->ReadScratchPad())
+	if (ts->ReadScratchPad())
 	{
 		s << setprecision(4) << ts->GetTemperature();
 	}

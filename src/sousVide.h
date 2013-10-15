@@ -12,6 +12,7 @@
 #include <ctime>
 #include <fstream>
 #include <vector>
+#include <time.h>
 
 // Local headers
 #include "sousVideConfig.h"
@@ -24,6 +25,7 @@ class TimeHistoryLog;
 struct FrontToBackMessage;
 struct BackToFrontMessage;
 class GNUPlotter;
+class TimingUtility;
 
 class SousVide
 {
@@ -65,16 +67,17 @@ private:
 	SousVideConfig configuration;
 	bool ReadConfiguration(void);
 
-	double timeStep;// [sec]
 	double plateauTemperature;// [deg F]
 	double soakTime;// [sec]
+
+	TimingUtility loopTimer;
 
 	// For maintaining timing statistics
 	void UpdateTimingStatistics(double elapsed);
 	static double AverageVector(const std::vector<double> &values);
 	unsigned int keyElement, maxElements;
 	std::vector<double> frameTimes, busyTimes;// [sec]
-	clock_t lastUpdate;
+	struct timespec lastUpdate;
 
 	NetworkInterface *ni;
 	void ProcessMessage(const FrontToBackMessage &recievedMessage);

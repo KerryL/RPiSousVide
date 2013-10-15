@@ -127,7 +127,6 @@ bool TemperatureSensor::GetTemperature(double &temperature) const
 	}
 
 	temperature = atof(data.substr(start + 2).c_str()) / 1000.0;
-	// TODO:  Allow calibration?
 
 	return true;
 }

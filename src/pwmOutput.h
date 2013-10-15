@@ -19,7 +19,7 @@ public:
 		ModeMarkSpace
 	};
 
-	PWMOutput(int pin = 1, PWMMode mode = ModeBalanced);
+	PWMOutput(int pin = 1, PWMMode mode = ModeMarkSpace);
 
 	void SetDutyCycle(double duty);
 	void SetMode(PWMMode mode);

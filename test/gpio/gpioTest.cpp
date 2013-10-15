@@ -17,15 +17,14 @@
 // Local headers
 #include "gpio.h"
 #include "pwmOutput.h"
+#include "timingUtility.h"
 
 using namespace std;
 
 // Entry point
 int main(int, char *[])
 {
-	clock_t start, stop;
-	double elapsed;
-	double timeStep(0.01);// [sec]
+	TimingUtility loopTimer(0.1);
 
 	double t(0.0);
 	double f(2 * M_PI * 0.5);// [Hz]
@@ -44,7 +43,7 @@ int main(int, char *[])
 	
 	while (true)
 	{
-		start = clock();
+		loopTimer.TimeLoop();
 
 		// This test application waits for the input to go low (by
 		// default, it's pulled high - wiring must account for this)
@@ -61,16 +60,7 @@ int main(int, char *[])
 			outPin.SetOutput(false);
 		}
 
-		t += timeStep;
-
-		stop = clock();
-
-		// Handle overflows
-		elapsed = double(stop - start) / (double)(CLOCKS_PER_SEC);
-		if (stop < start || elapsed > timeStep)
-			continue;
-
-		usleep(1000000 * (timeStep - elapsed));
+		t += loopTimer.GetTimeStep();
 	}
 
 	return 0;

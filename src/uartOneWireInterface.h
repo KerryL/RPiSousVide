@@ -21,7 +21,7 @@
 class UARTOneWireInterface
 {
 public:
-	UARTOneWireInterface(const std::string &rom);
+	UARTOneWireInterface(const std::string &rom, std::ostream& outStream = std::cout);
 	virtual ~UARTOneWireInterface();
 
 	static bool ResetAndPresenceDetect(void);
@@ -37,6 +37,8 @@ public:
 	static std::string ttyFile;
 
 private:
+	const std::string rom;
+
 	static const speed_t normalBaud;
 	static const speed_t resetBaud;
 
@@ -49,20 +51,19 @@ private:
 	static bool FindAllDevicesWithCommand(const unsigned char &command,
 		std::vector<std::string>& roms);
 
-	const std::string rom;
-
 	static bool SetBaud(const speed_t& baud);
 
 	static unsigned char ComputeCRC(const std::string &s, const bool &reverseInput = false);
 
 protected:
+	std::ostream& outStream;
+
 	static const unsigned char searchROMCommand;
 	//static const unsigned char readROMCommand;// search ROM is preferred
 	static const unsigned char matchROMCommand;
 	static const unsigned char skipROMCommand;
 	static const unsigned char alarmSearchCommand;
 
-	static std::ostream& outStream;
 	static bool FamilyMatchesROM(const std::string &rom, unsigned char familyCode);
 	bool FamilyMatchesROM(unsigned char familyCode) const;
 

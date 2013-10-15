@@ -48,7 +48,6 @@ const unsigned char UARTOneWireInterface::matchROMCommand = 0x55;
 const unsigned char UARTOneWireInterface::skipROMCommand = 0xCC;
 const unsigned char UARTOneWireInterface::alarmSearchCommand = 0xEC;
 
-std::ostream& UARTOneWireInterface::outStream = std::cout;
 std::string UARTOneWireInterface::ttyFile = "/dev/ttyS0";
 unsigned int UARTOneWireInterface::deviceCount = 0;
 int UARTOneWireInterface::serialFile = -1;
@@ -62,6 +61,7 @@ int UARTOneWireInterface::serialFile = -1;
 // Input Arguments:
 //		rom			= cosnt std::string& indicating the 64-bit ROM code used
 //					  to identify slave devices
+//		outStream	= std::ostream&
 //
 // Output Arguments:
 //		None
@@ -70,7 +70,8 @@ int UARTOneWireInterface::serialFile = -1;
 //		None
 //
 //==========================================================================
-UARTOneWireInterface::UARTOneWireInterface(const std::string &rom) : rom(rom)
+UARTOneWireInterface::UARTOneWireInterface(const std::string &rom,
+	std::ostream& outStream) : rom(rom), outStream(outStream)
 {
 	if (!CRCIsOK(rom))
 	{
@@ -133,7 +134,7 @@ bool UARTOneWireInterface::ResetAndPresenceDetect(void)
 	unsigned char response;
 	if (read(serialFile, &response, sizeof(response)) == -1)
 	{
-		outStream << "Failed to read from serial port during presence detect:  "
+		std::cout << "Failed to read from serial port during presence detect:  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
@@ -270,7 +271,7 @@ bool UARTOneWireInterface::FindAllDevicesWithCommand(
 				// ROM vector should be empty - if it's not, tell the user
 				if (roms.size() > 0 || bitNumber > 0)
 				{
-					outStream << "Error:  Expected response from connected device, but no response was received" << std::endl;
+					std::cout << "Error:  Expected response from connected device, but no response was received" << std::endl;
 					CloseSerialFile();
 					return false;
 				}
@@ -334,7 +335,7 @@ bool UARTOneWireInterface::FindAllDevicesWithCommand(
 
 		if (!CRCIsOK(roms[i]))
 		{
-			outStream << "CRC check failed for ROM " << roms[i] << std::endl;
+			std::cout << "CRC check failed for ROM " << roms[i] << std::endl;
 			return false;
 		}
 	}
@@ -364,14 +365,14 @@ bool UARTOneWireInterface::Write(const unsigned char &c)
 
 	if (write(serialFile, &c, sizeof(c)) == -1)
 	{
-		outStream << "Failed to write to serial port:  "
+		std::cout << "Failed to write to serial port:  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
 
 	if (tcdrain(serialFile) == -1)
 	{
-		outStream << "Failed to flush serial port following write:  "
+		std::cout << "Failed to flush serial port following write:  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
@@ -432,14 +433,14 @@ bool UARTOneWireInterface::Read(unsigned char &c)
 	unsigned char readSignal(0xFF);
 	if (write(serialFile, &readSignal, sizeof(readSignal)) == -1)
 	{
-		outStream << "Failed to initiate read time slot:  "
+		std::cout << "Failed to initiate read time slot:  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
 
 	if (read(serialFile, &c, sizeof(c)) == -1)
 	{
-		outStream << "Failed to read from serial port:  "
+		std::cout << "Failed to read from serial port:  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
@@ -478,7 +479,7 @@ bool UARTOneWireInterface::OpenSerialFile(void)
 	if (serialFile == -1)
 	{
 		deviceCount--;
-		outStream << "Failed to open '" << ttyFile << "':  "
+		std::cout << "Failed to open '" << ttyFile << "':  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
@@ -487,7 +488,7 @@ bool UARTOneWireInterface::OpenSerialFile(void)
 	struct termios options;
 	if (tcgetattr(serialFile, &options) == -1)
 	{
-		outStream << "Failed to get serial port options:  "
+		std::cout << "Failed to get serial port options:  "
 			<< std::strerror(errno) << std::endl;
 		CloseSerialFile();
 		return false;
@@ -498,7 +499,7 @@ bool UARTOneWireInterface::OpenSerialFile(void)
 
 	if (tcsetattr(serialFile, TCSANOW, &options) == -1)
 	{
-		outStream << "Failed to set serial port options:  "
+		std::cout << "Failed to set serial port options:  "
 			<< std::strerror(errno) << std::endl;
 		CloseSerialFile();
 		return false;
@@ -540,7 +541,7 @@ bool UARTOneWireInterface::CloseSerialFile(void)
 
 	if (close(serialFile) == -1)
 	{
-		outStream << "Failed to close 1-wire serial port file:  "
+		std::cout << "Failed to close 1-wire serial port file:  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
@@ -571,21 +572,21 @@ bool UARTOneWireInterface::SetBaud(const speed_t& baud)
 	struct termios options;
 	if (tcgetattr(serialFile, &options) == -1)
 	{
-		outStream << "Failed to get serial port options in SetBaud():  "
+		std::cout << "Failed to get serial port options in SetBaud():  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
 
 	if (cfsetspeed(&options, baud) == -1)
 	{
-		outStream << "Failed to set serial port speed:  "
+		std::cout << "Failed to set serial port speed:  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}
 
 	if (tcsetattr(serialFile, TCSANOW, &options) == -1)
 	{
-		outStream << "Failed to set serial port options in SetBaud():  "
+		std::cout << "Failed to set serial port options in SetBaud():  "
 			<< std::strerror(errno) << std::endl;
 		return false;
 	}

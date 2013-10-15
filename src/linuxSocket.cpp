@@ -89,9 +89,15 @@ LinuxSocket::LinuxSocket(SocketType type, ostream& outStream) : type(type), outS
 LinuxSocket::~LinuxSocket()
 {
 	continueListening = false;
+	int errorNumber;
 	if (type == SocketTCPServer)
-		pthread_join(listenerThread, NULL);// TODO:  Add messaging/check return values here?
-	pthread_mutex_destroy(&bufferMutex);// TODO:  Add messaging/check return values here?
+	{
+		if ((errorNumber = pthread_join(listenerThread, NULL)) != 0)
+			outStream << "Error destroying mutex (" << errorNumber << ")" << endl;
+	}
+
+	if ((errorNumber = pthread_mutex_destroy(&bufferMutex)) != 0)
+		outStream << "Error destroying mutex (" << errorNumber << ")" << endl;
 
 	delete [] rcvBuffer;
 	rcvBuffer = NULL;
@@ -256,12 +262,8 @@ bool LinuxSocket::Listen(void)
 {
 	continueListening = true;
 
-	// TODO:  Move this to a better place?
 	// TCP severs crash if writing to a broken pipe, if we don't explicitly ignore the error
 	signal(SIGPIPE, SIG_IGN);
-/*	int optval(1);
-	if (setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == SOCKET_ERROR)
-		cout << "Error setting socket options" << endl;*/
 
 	if (listen(sock, maxConnections) == SOCKET_ERROR)
 	{
@@ -370,9 +372,12 @@ void LinuxSocket::ListenThreadEntry(void)
 //==========================================================================
 void LinuxSocket::HandleClient(int newSock)
 {
-	pthread_mutex_lock(&bufferMutex);// TODO:  Check return values?
+	int errorNumber;
+	if ((errorNumber = pthread_mutex_lock(&bufferMutex)) != 0)
+		outStream << "Error locking mutex (" << errorNumber << ")" << endl;
 	clientMessageSize = DoReceive(newSock);
-	pthread_mutex_unlock(&bufferMutex);// TODO:  Check return values?
+	if ((errorNumber = pthread_mutex_unlock(&bufferMutex)) != 0)
+		outStream << "Error unlocking mutex (" << errorNumber << ")" << endl;
 
 	// On disconnect
 	if (clientMessageSize <= 0)
@@ -811,13 +816,13 @@ std::string LinuxSocket::GetTypeString(SocketType type)
 //==========================================================================
 std::string LinuxSocket::GetLastError(void)
 {
-#ifdef WIN32
-	// TODO:  Implement
-#else
 	stringstream errorString;
+#ifdef WIN32
+	errorString << "(" << WSAGetLastError() << ")";
+#else
 	errorString << "(" << errno << ") " << strerror(errno);
-	return errorString.str();
 #endif
+	return errorString.str();
 }
 
 //==========================================================================

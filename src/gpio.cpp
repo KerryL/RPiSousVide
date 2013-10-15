@@ -104,7 +104,6 @@ void GPIO::SetDataDirection(DataDirection direction)
 {
 	assert(direction != DirectionPWMOutput || pin == 1);
 
-	// TODO:  Is this bit necessary?
 	if (direction == DirectionOutput)
 		SetPullUpDown(PullOff);
 
@@ -138,7 +137,6 @@ void GPIO::SetDataDirection(DataDirection direction)
 //==========================================================================
 void GPIO::SetPullUpDown(PullResistance state)
 {
-	// TODO:  Is this assertion necessary?
 	assert(state == PullOff || direction == DirectionInput);
 
 	if (state == PullOff)

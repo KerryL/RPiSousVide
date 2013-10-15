@@ -11,13 +11,13 @@
 #include <string>
 #include <sstream>
 #include <cassert>
-#include <time.h>
 
 // *nix standard headers
 #include <unistd.h>
 
 // Local headers
 #include "temperatureSensor.h"
+#include "timingUtility.h"
 
 using namespace std;
 
@@ -68,63 +68,51 @@ int main(int argc, char *argv[])
 		heading3.append(string(columnWidth,'-'));
 	}
 
-	struct timespec start, stop, loopStart, loopStop;
-	double elapsed;
-	double timeStep(0.85);// [sec]
+	struct timespec start, stop, resolution;
+	TimingUtility loopTimer(0.85);
+	if (!loopTimer.GetResolution(resolution))
+		cout << "Failed to read timer resolution" << endl;
+	else
+		cout << "Timer resoltuion on this machine is " << TimingUtility::TimespecToSeconds(resolution) * 1.0e9 << " nsec" << endl;
 
-	cout << "Sensor readings will be taken every " << timeStep << " seconds." << endl;
-	cout << "Reading frequency with the built-in system method is limited to one sensor every 750 msec (+overhead for reading from sensor)" << endl;
+	cout << "Sensor readings will be taken every " << loopTimer.GetTimeStep() << " seconds." << endl;
+	cout << "Reading frequency with the built-in system method is limited to one sensor every 750 msec (due to unconfigurable 12-bit resolution)" << endl;
+	cout << "In practice, additional time is required for reading/writing from/to the sensor" << endl;
+	cout << "Testing has shown that a minimum of about 0.83 seconds per sensor is required" << endl;
+	cout << "Access to the 1-wire interface can improve timing in two ways:" << endl;
+	cout << "  1) Configure the sensor to use less resolution" << endl;
+	cout << "  2) Broadcast to all sensors to begin measurements at once, then read from each sensor"
+		<< " (sensors update in parallel instead of series - applicable only for cases where multiple sensors are used)" << endl;
 
 	cout << endl;
 	cout << heading1 << endl;
 	cout << heading2 << endl;
 	cout << heading3 << endl;
 
-	if (clock_gettime(CLOCK_MONOTONIC, &loopStart) == -1)
-	{
-		cout << "clock_gettime failed" << endl;
-		return 1;
-	}
+	if (!TimingUtility::GetCurrentTime(start))
+		cout << "Failed to start execution timer" << endl;
 
 	const unsigned int readings(10);
 	for (i = 0; i < readings * sensorList.size(); i++)
 	{
-		if (clock_gettime(CLOCK_MONOTONIC, &start) == -1)
-		{
-			cout << "clock_gettime failed" << endl;
-			return 1;
-		}
+		if (!loopTimer.TimeLoop())
+			cout << "Loop timer failed" << endl;
 
 		cout << MakeColumn(GetReadingString(tsArray[i % sensorList.size()]), columnWidth);
 		cout.flush();
 
 		if (i % sensorList.size() == sensorList.size() - 1)
 			cout << endl;
-
-		if (clock_gettime(CLOCK_MONOTONIC, &stop) == -1)
-		{
-			cout << "clock_gettime failed" << endl;
-			return 1;
-		}
-
-		// Handle overflows
-		elapsed = stop.tv_sec - start.tv_sec + (stop.tv_nsec - start.tv_nsec) * 1.0e-9;
-		if (elapsed > timeStep)
-			continue;
-
-		usleep(1000000 * (timeStep - elapsed));
 	}
 
-	if (clock_gettime(CLOCK_MONOTONIC, &loopStop) == -1)
+	if (!TimingUtility::GetCurrentTime(stop))
+		cout << "Failed to stop execution timer" << endl;
+	else
 	{
-		cout << "clock_gettime failed" << endl;
-		return 1;
+		cout << "Average actual read time:  ";
+		cout << TimingUtility::TimespecToSeconds(TimingUtility::GetDeltaTime(stop, start))
+			/ double(readings * sensorList.size()) << " sec" << endl;
 	}
-
-	elapsed = loopStop.tv_sec - loopStart.tv_sec + (loopStop.tv_nsec - loopStart.tv_nsec) * 1.0e-9;
-
-	cout << "Average actual read time:  ";
-	cout << elapsed / double(readings * sensorList.size()) << " sec" << endl;
 
 	for (i = 0; i < sensorList.size(); i++)
 		delete tsArray[i];

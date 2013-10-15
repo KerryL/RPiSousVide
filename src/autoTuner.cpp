@@ -108,7 +108,8 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 	assert(time.size() == temperature.size());
 	assert(time.size() > 2);// Really it should be much larger, but we'll crash if it's smaller than 2
 
-	// TODO:  Necessary to filter data?
+	// If we wanted to filter the data, it would be done here
+	// I don't think it's necessary, though, so we're leaving it out
 
 	const double ignoreInitialTime(5.0);// [sec]
 	std::vector<double> croppedTime, croppedTemp, dTdt;
@@ -177,9 +178,13 @@ bool AutoTuner::ComputeC1(const std::vector<double> &time, const std::vector<dou
 		A(i, 0) = time[i];
 		A(i, 1) = 1.0;
 		b(i, 0) = log(dTdt[i]);
-	}
 
-	// TODO:  Check for NaN of Inf in b vector?
+		if (isinf(b(i, 0)) || b(i, 0) != b(i, 0))
+		{
+			outStream << "Error while performing linear regression:  Invalid value encountered" << std::endl;
+			return false;
+		}
+	}
 
 	c1 = -A.LeftDivide(b)(0,0);
 
