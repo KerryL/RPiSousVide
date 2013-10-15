@@ -16,6 +16,7 @@
 
 // Local headers
 #include "sousVideConfig.h"
+#include "timingUtility.h"
 
 // Local forward declarations
 class NetworkInterface;

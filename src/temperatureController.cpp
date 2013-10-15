@@ -1,4 +1,4 @@
-// File:  temperatureController.h
+// File:  temperatureController.cpp
 // Date:  8/30/2013
 // Auth:  K. Loux
 // Copy:  (c) Copyright 2013
@@ -23,7 +23,7 @@
 // Input Arguments:
 //		timeStep		= double [sec]
 //		configuration	= ControllerConfiguration
-//		sensor			= TemperatureSensor* DS18B20UART*?
+//		sensor			= TemperatureSensor*
 //		pwmOut			= PWMOutput*
 //
 // Output Arguments:
@@ -35,7 +35,7 @@
 //==========================================================================
 TemperatureController::TemperatureController(double timeStep,
 	ControllerConfiguration configuration,
-	TemperatureSensor/*DS18B20UART*/ *sensor, PWMOutput *pwmOut)
+	TemperatureSensor *sensor, PWMOutput *pwmOut)
 	: PIDController(timeStep, configuration.kp, configuration.ti, configuration.kd,
 	configuration.kf, configuration.td, configuration.tf), sensor(sensor), pwmOut(pwmOut)
 {
@@ -114,7 +114,6 @@ void TemperatureController::UpdateConfiguration(ControllerConfiguration configur
 //==========================================================================
 bool TemperatureController::ReadTemperature(void)
 {
-	//TODO:  Additional stuff necessary if using DS18B20UART
 	if (sensor->GetTemperature(actualTemperature))
 	{
 		sensorOK = true;

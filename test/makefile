@@ -12,8 +12,8 @@ TESTDIRS = \
 	autoTuner \
 	json \
 	tempSensor \
-	gnuPlot \
-	uartTempSensor
+	gnuPlot
+#	uartTempSensor
 
 .PHONY: all clean
 
