@@ -107,8 +107,9 @@ bool TimingUtility::TimeLoop(void)
 			return false;
 		}
 
+		const double warningThreshold(1.01);// 1% threshold
 		elapsed = TimespecToSeconds(GetDeltaTime(now, loopTime));
-		if (elapsed > timeStep)
+		if (elapsed > timeStep * warningThreshold)
 			outStream << "Warning:  Elapsed time is greater than time step ("
 				<< elapsed << " > " << timeStep << ")" << std::endl;
 		else
