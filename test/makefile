@@ -11,9 +11,9 @@ TESTDIRS = \
 	derivativeFilter \
 	autoTuner \
 	json \
-	tempSensor \
 	gnuPlot \
 	uartTempSensor
+#	tempSensor
 
 .PHONY: all clean
 

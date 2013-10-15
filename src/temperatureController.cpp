@@ -1,4 +1,4 @@
-// File:  temperatureController.h
+// File:  temperatureController.cpp
 // Date:  8/30/2013
 // Auth:  K. Loux
 // Copy:  (c) Copyright 2013
@@ -11,7 +11,7 @@
 // Local headers
 #include "temperatureController.h"
 #include "sousVideConfig.h"
-#include "temperatureSensor.h"
+#include "ds18b20UART.h"
 #include "pwmOutput.h"
 
 //==========================================================================
@@ -35,7 +35,7 @@
 //==========================================================================
 TemperatureController::TemperatureController(double timeStep,
 	ControllerConfiguration configuration,
-	TemperatureSensor/*DS18B20UART*/ *sensor, PWMOutput *pwmOut)
+	DS18B20UART *sensor, PWMOutput *pwmOut)
 	: PIDController(timeStep, configuration.kp, configuration.ti, configuration.kd,
 	configuration.kf, configuration.td, configuration.tf), sensor(sensor), pwmOut(pwmOut)
 {
@@ -114,13 +114,13 @@ void TemperatureController::UpdateConfiguration(ControllerConfiguration configur
 //==========================================================================
 bool TemperatureController::ReadTemperature(void)
 {
-	//TODO:  Additional stuff necessary if using DS18B20UART
-	if (sensor->GetTemperature(actualTemperature))
+	if (sensor->ConvertTemperature() &&
+		sensor->ReadScratchPad())
 	{
 		sensorOK = true;
 
 		// Convert from deg C to deg F
-		actualTemperature = actualTemperature * 1.8 + 32.0;
+		actualTemperature = sensor->GetTemperature() * 1.8 + 32.0;
 	}
 	else
 		sensorOK = false;

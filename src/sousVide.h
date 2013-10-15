@@ -16,6 +16,7 @@
 
 // Local headers
 #include "sousVideConfig.h"
+#include "timingUtility.h"
 
 // Local forward declarations
 class NetworkInterface;
@@ -25,7 +26,6 @@ class TimeHistoryLog;
 struct FrontToBackMessage;
 struct BackToFrontMessage;
 class GNUPlotter;
-class TimingUtility;
 
 class SousVide
 {

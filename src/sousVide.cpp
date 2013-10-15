@@ -22,8 +22,7 @@
 #include "sousVide.h"
 #include "networkInterface.h"
 #include "gpio.h"
-#include "temperatureSensor.h"
-//#include "ds18b20UART.h"
+#include "ds18b20UART.h"
 #include "pwmOutput.h"
 #include "temperatureController.h"
 #include "combinedLogger.h"
@@ -128,12 +127,12 @@ SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger()),
 	std::string sensorID(configuration.io.sensorID);
 	if (sensorID.empty())
 	{
-		std::vector<std::string> sensorList = TemperatureSensor::GetConnectedSensors();
-		/*if (!DS18B20UART::SearchROMs(sensorList))
+		std::vector<std::string> sensorList;
+		if (!DS18B20UART::SearchROMs(sensorList))
 		{
 			CombinedLogger::GetLogger() << "Failed to complete temperature sensor ROM search.  Exiting..." << std::endl;
 			exit(1);
-		}*/
+		}
 
 		if (sensorList.size() == 0)
 		{
@@ -161,7 +160,7 @@ SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger()),
 	ni = new NetworkInterface(configuration.network);
 	controller = new TemperatureController(1.0 / configuration.system.activeFrequency,
 		configuration.controller,
-		new TemperatureSensor/*DS18B20UART*/(sensorID, CombinedLogger::GetLogger()),
+		new DS18B20UART(sensorID, CombinedLogger::GetLogger()),
 		new PWMOutput(configuration.io.heaterRelayPin));
 	controller->SetRateLimit(configuration.system.maxHeatingRate);
 	pumpRelay = new GPIO(configuration.io.pumpRelayPin, GPIO::DirectionOutput);
@@ -251,7 +250,7 @@ void SousVide::Run()
 	while (true)
 	{
 		if (!loopTimer.TimeLoop())
-			outStream << "Warning:  Main loop timing failed" << std::endl;
+			CombinedLogger::GetLogger() << "Warning:  Main loop timing failed" << std::endl;
 
 		if (maxElements > 0)
 			UpdateTimingStatistics(loopTimer.GetLastLoopTime());
@@ -543,8 +542,8 @@ void SousVide::EnterState(void)
 		{
 			if (configuration.network.port != oldNetworkConfig.port)
 				CombinedLogger::GetLogger() << "Network port number change will take effect next time the application is started" << std::endl;
-			if (configuration.io.pumpPin != oldIOConfig.pumpPin ||
-				configuration.io.heaterPin != oldIOConfig.heaterPin ||
+			if (configuration.io.pumpRelayPin != oldIOConfig.pumpRelayPin ||
+				configuration.io.heaterRelayPin != oldIOConfig.heaterRelayPin ||
 				configuration.io.sensorID != oldIOConfig.sensorID)
 				CombinedLogger::GetLogger() << "I/O configuration changes will take effect next time the application is started" << std::endl;
 
@@ -1221,7 +1220,7 @@ void SousVide::UpdateTimingStatistics(double elapsed)
 	struct timespec now;
 	if (!TimingUtility::GetCurrentTime(now))
 	{
-		outStream << "Warning:  Failed to update time while calculating timing statistics" << std::endl;
+		CombinedLogger::GetLogger() << "Warning:  Failed to update time while calculating timing statistics" << std::endl;
 		return;
 	}
 
@@ -1398,7 +1397,7 @@ void SousVide::UpdatePlotFile(void)
 	plotter->PlotYAgainstX(1, plotTime, plotActualTemperature, "title \"Actual\" ls 2 with lines");
 
 	plotter->SendCommand("replot");
-	plotter->WaitForWaitForGNUPlot();
+	plotter->WaitForGNUPlot();
 
 	plotTime.clear();
 	plotCommandedTemperature.clear();
