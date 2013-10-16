@@ -34,6 +34,7 @@ private:
 
 public:
 	Logger(std::ostream& str) : std::ostream(&buffer), buffer(str) {};
+	virtual ~Logger() {};
 };
 
 #endif// LOGGER_H_

@@ -15,7 +15,6 @@
 #include <iostream>
 #include <vector>
 #include <map>
-#include <string>
 #include <sstream>
 #include <cassert>
 
@@ -28,32 +27,50 @@ public:
 	static CombinedLogger& GetLogger(void);
 	static void Destroy(void);
 
-	void Add(std::ostream* log);
-
-	template <typename T>
-	friend CombinedLogger& operator<<(CombinedLogger &out, T t);
+	void Add(std::ostream* log, bool manageMemory = true);
 
 private:
 	class CombinedStreamBuffer : public std::stringbuf
 	{
 	public:
-		CombinedStreamBuffer(CombinedLogger &log) : log(log) {}
+		CombinedStreamBuffer(CombinedLogger &log) : log(log) {};
+		virtual ~CombinedStreamBuffer()
+		{
+			std::map<pthread_t, std::stringstream*>::iterator it;
+			for (it = threadBuffer.begin(); it != threadBuffer.end(); it++)
+				delete it->second;
+
+			int errorNumber;
+			if ((errorNumber = pthread_mutex_destroy(&mutex)) != 0)
+				std::cout << "Error destroying mutex (" << errorNumber << ")" << std::endl;
+		};
+
+	protected:
+		virtual int overflow(int c)
+		{
+			CreateThreadBuffer();
+			if (c != traits_type::eof())
+				*threadBuffer[pthread_self()] << (char)c;
+
+			return c;
+		};
 
 		virtual int sync(void)
 		{
 			assert(log.logs.size() > 0);// Make sure we didn't forget to add logs
-			MutexLocker lock(log.mutex);
+
+			CreateThreadBuffer();// Before mutex locker, because this might lock the mutex, too
+			MutexLocker lock(mutex);
 			
-unsigned int i;
+			unsigned int i;
 			for (i = 0; i < log.logs.size(); i++)
-				*log.logs[i] << log.threadBuffer[pthread_self()] << std::endl;
-/*{
-				*log.logs[i] << str();
-log.logs[i]->flush();
-}*/
+			{
+				*log.logs[i].first << threadBuffer[pthread_self()]->str();
+				log.logs[i].first->flush();
+			}
 
 			// Clear out the buffers
-			log.threadBuffer[pthread_self()].clear();
+			threadBuffer[pthread_self()]->str("");
 			str("");
 
 			return 0;
@@ -61,28 +78,26 @@ log.logs[i]->flush();
 
 	private:
 		CombinedLogger &log;
+		std::map<pthread_t, std::stringstream*> threadBuffer;
+		static pthread_mutex_t mutex;
+		void CreateThreadBuffer(void)
+		{
+			if (threadBuffer.find(pthread_self()) == threadBuffer.end())
+			{
+				MutexLocker lock(mutex);
+				if (threadBuffer.find(pthread_self()) == threadBuffer.end())
+					threadBuffer[pthread_self()] = new std::stringstream;
+			}
+		};
 	} buffer;
 
 	CombinedLogger() : std::ostream(&buffer), buffer(*this) {};
-	~CombinedLogger();
+	virtual ~CombinedLogger();
 
 	static CombinedLogger *logger;
 	static pthread_mutex_t mutex;
 
-	std::vector<std::ostream*> logs;
-	std::map<pthread_t, std::string> threadBuffer;
+	std::vector<std::pair<std::ostream*, bool> > logs;
 };
-
-template <typename T>
-CombinedLogger& operator<<(CombinedLogger &out, T t)
-{
-	std::stringstream ss;
-	ss << t;
-	out.threadBuffer[pthread_self()].append(ss.str());
-	std::cerr << "t contains: " << t << std::endl;
-	std::cerr << "buffer should now contatin: " << ss.str() << std::endl;
-	std::cerr << "it does contain: " << out.threadBuffer[pthread_self()] << std::endl;
-	return out;
-}
 
 #endif// COMBINED_LOGGER_H_

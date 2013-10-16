@@ -26,6 +26,7 @@
 //==========================================================================
 CombinedLogger *CombinedLogger::logger = NULL;
 pthread_mutex_t CombinedLogger::mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t CombinedLogger::CombinedStreamBuffer::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 //==========================================================================
 // Class:			CombinedLogger
@@ -45,10 +46,17 @@ pthread_mutex_t CombinedLogger::mutex = PTHREAD_MUTEX_INITIALIZER;
 //==========================================================================
 CombinedLogger::~CombinedLogger()
 {
-	// No lock necessary, since this can only be reached through Destroy() (which includes a lock)
+	// No lock here - users must ensure that Destroy is called by only one thread!
 	unsigned int i;
 	for (i = 0; i < logs.size(); i++)
-		delete logs[i];
+	{
+		if (logs[i].second)
+			delete logs[i].first;
+	}
+
+	int errorNumber;
+	if ((errorNumber = pthread_mutex_destroy(&mutex)) != 0)
+		std::cout << "Error destroying mutex (" << errorNumber << ")" << std::endl;
 }
 
 //==========================================================================
@@ -99,8 +107,6 @@ CombinedLogger& CombinedLogger::GetLogger(void)
 //==========================================================================
 void CombinedLogger::Destroy(void)
 {
-	MutexLocker lock(mutex);
-
 	delete logger;
 	logger = NULL;
 }
@@ -112,7 +118,8 @@ void CombinedLogger::Destroy(void)
 // Description:		Adds a log sink to the vector.
 //
 // Input Arguments:
-//		log	= std::ostream*
+//		log				= std::ostream*
+//		manageMemory	= bool
 //
 // Output Arguments:
 //		None
@@ -121,9 +128,9 @@ void CombinedLogger::Destroy(void)
 //		None
 //
 //==========================================================================
-void CombinedLogger::Add(std::ostream* log)
+void CombinedLogger::Add(std::ostream* log, bool manageMemory)
 {
 	assert(log);
 	MutexLocker lock(mutex);
-	logs.push_back(log);
+	logs.push_back(std::make_pair(log, manageMemory));
 }

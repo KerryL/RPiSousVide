@@ -8,6 +8,7 @@
 // Standard C++ headers
 #include <cstdlib>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 
 // *nix Standard headers
@@ -40,7 +41,7 @@ int main(int, char *[])
 	timeHistoryLog << 5.0 << 6.0 << endl;
 
 	cout << "Ending test of TimeHistoryLog" << endl << endl;
-	cout << "Beginning test of CombinedLogger" << endl;
+	cout << "Beginning test of CombinedLogger (passed as ostream argument)" << endl;
 	const string logFileName("loggerTest.log");
 	cout << "Output will be written to stdout and '" << logFileName << "':" << endl << endl;
 
@@ -61,7 +62,19 @@ int main(int, char *[])
 	CombinedLogger::Destroy();
 	logFile.close();
 
-	cout << "Ending test of CombinedLogger" << endl;
+	cout << "Ending test of CombinedLogger (passed as ostream argument)" << endl;
+	cout << "Beginning test of CombinedLogger (used directly for special formatting)" << endl;
+	cout << "Output will be written to stdout only:" << endl << endl;
+
+	CombinedLogger::GetLogger().Add(new Logger(cout));
+
+	CombinedLogger::GetLogger() << "Here's a number with trailing zeros:  " << std::setprecision(10) << std::fixed << 1.0 << std::endl;
+	CombinedLogger::GetLogger() << "Here's a hex number:  0x" << std::hex << 256 << std::endl;
+	CombinedLogger::GetLogger() << "Here's a number in scientific notation:  " << std::scientific << 6548454.8486868 << std::endl;
+
+	CombinedLogger::Destroy();
+
+	cout << "Ending test of CombinedLogger (used directly for special formatting)" << endl;
 
 	return 0;
 }
