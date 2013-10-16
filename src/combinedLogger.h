@@ -43,11 +43,14 @@ private:
 		{
 			assert(log.logs.size() > 0);// Make sure we didn't forget to add logs
 			MutexLocker lock(log.mutex);
-
-			unsigned int i;
+			
+unsigned int i;
 			for (i = 0; i < log.logs.size(); i++)
-//				*log.logs[i] << log.threadBuffer[pthread_self()] << std::endl;
+				*log.logs[i] << log.threadBuffer[pthread_self()] << std::endl;
+/*{
 				*log.logs[i] << str();
+log.logs[i]->flush();
+}*/
 
 			// Clear out the buffers
 			log.threadBuffer[pthread_self()].clear();
@@ -73,13 +76,12 @@ private:
 template <typename T>
 CombinedLogger& operator<<(CombinedLogger &out, T t)
 {
-/*	std::stringstream ss;
+	std::stringstream ss;
 	ss << t;
 	out.threadBuffer[pthread_self()].append(ss.str());
 	std::cerr << "t contains: " << t << std::endl;
 	std::cerr << "buffer should now contatin: " << ss.str() << std::endl;
-	std::cerr << "it does contain: " << out.threadBuffer[pthread_self()] << std::endl;*/
-	out << t;
+	std::cerr << "it does contain: " << out.threadBuffer[pthread_self()] << std::endl;
 	return out;
 }
 
