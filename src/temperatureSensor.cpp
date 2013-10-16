@@ -175,14 +175,11 @@ std::vector<std::string> TemperatureSensor::GetConnectedSensors(std::string sear
 	}
 
 	if (closedir(directory) == -1)
-	{
 		std::cout << "Failed to close directory file" << std::endl;
-	}
 
 	unsigned int i;
 	for (i = 0; i < deviceList.size(); i++)
 	{
-		std::cout << deviceList[i] << std::endl;
 		if (!TemperatureSensor::DeviceIsDS18B20(deviceList[i]))
 		{
 			deviceList.erase(deviceList.begin() + i);

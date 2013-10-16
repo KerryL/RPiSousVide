@@ -185,6 +185,8 @@ void DoTimedLoop(double timeStep, unsigned int readingCount,
 		}
 		cout << endl;
 	}
+
+	cout << loopTimer.GetTimingStatistics() << endl;
 }
 
 string GetReadingString(DS18B20UART *ts)

@@ -7,6 +7,9 @@
 #ifndef LINUX_SOCKET_H_
 #define LINUX_SOCKET_H_
 
+// pThread headers (must be first!)
+#include <pthread.h>
+
 // Standard C++ headers
 #include <string>
 #include <vector>
@@ -14,9 +17,6 @@
 
 // *nix headers
 #include <sys/select.h>
-
-// pThread headers
-#include <pthread.h>
 
 // *nix forward declarations
 struct sockaddr_in;

@@ -6,6 +6,9 @@
 //        releases when destroyed.  This can be used to ease handling of
 //        mutexes in a function with multiple control paths.
 
+// Standard C++ headers
+#include <iostream>
+
 // Local headers
 #include "mutexLocker.h"
 
@@ -27,7 +30,9 @@
 //==========================================================================
 MutexLocker::MutexLocker(pthread_mutex_t &mutex) : mutex(mutex)
 {
-	pthread_mutex_lock(&mutex);
+	int errorNumber;
+	if ((errorNumber = pthread_mutex_lock(&mutex)) != 0)
+		std::cout << "Failed to lock mutex:  " << errorNumber << std::endl;
 }
 
 //==========================================================================
@@ -48,5 +53,7 @@ MutexLocker::MutexLocker(pthread_mutex_t &mutex) : mutex(mutex)
 //==========================================================================
 MutexLocker::~MutexLocker()
 {
-	pthread_mutex_unlock(&mutex);
+	int errorNumber;
+	if ((errorNumber = pthread_mutex_unlock(&mutex)) != 0)
+		std::cout << "Failed to unlock mutex:  " << errorNumber << std::endl;
 }

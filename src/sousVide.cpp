@@ -12,6 +12,7 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <fstream>
 #include <cmath>
 #include <cstdio>
 
@@ -23,10 +24,10 @@
 #include "networkInterface.h"
 #include "gpio.h"
 #include "temperatureSensor.h"
-//#include "ds18b20UART.h"
 #include "pwmOutput.h"
 #include "temperatureController.h"
 #include "combinedLogger.h"
+#include "logger.h"
 #include "timeHistoryLog.h"
 #include "networkMessageDefs.h"
 #include "autoTuner.h"
@@ -69,10 +70,25 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	// Configure the logger object
+	const std::string logFileName("sousVide.log");
+	std::ofstream logFile(logFileName.c_str(), std::ios::out);
+	if (!logFile.is_open() || !logFile.good())
+	{
+		std::cout << "Failed to open '" << logFileName << "' for output" << std::endl;
+		return 1;
+	}
+
+	CombinedLogger::GetLogger().Add(new Logger(std::cout));
+	CombinedLogger::GetLogger().Add(new Logger(logFile));
+
 	SousVide *sousVide = new SousVide(autoTune);
 	sousVide->Run();
 	delete sousVide;
+
+	// Clean up the logger object
 	CombinedLogger::GetLogger().Destroy();
+	logFile.close();
 
 	return 0;
 }
@@ -169,9 +185,6 @@ SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger()),
 	thLog = NULL;
 	thLogFile = NULL;
 	plotter = NULL;
-
-	maxElements = configuration.system.activeFrequency * configuration.system.statisticsTime;
-	keyElement = 0;
 }
 
 //==========================================================================
@@ -246,9 +259,6 @@ void SousVide::Run()
 	{
 		if (!loopTimer.TimeLoop())
 			CombinedLogger::GetLogger() << "Warning:  Main loop timing failed" << std::endl;
-
-		if (maxElements > 0)
-			UpdateTimingStatistics(loopTimer.GetLastLoopTime());
 
 		// Do the core work for the application
 		if (ni->ReceiveData(receivedMessage))
@@ -758,7 +768,10 @@ void SousVide::ExitState(void)
 	else if (state == StateHeating)
 		ExitActiveState();
 	else if (state == StateSoaking)
+	{
 		ExitActiveState();
+		CombinedLogger::GetLogger() << loopTimer.GetTimingStatistics();
+	}
 	else if (state == StateCooling)
 	{
 	}
@@ -1189,99 +1202,6 @@ bool SousVide::CleanUpAutoTuneLog(std::vector<double> &time,
 		<< autoTuneLogName << "' to '" << newName << "'" << std::endl;
 
 	return true;
-}
-
-//==========================================================================
-// Class:			SousVide
-// Function:		UpdateTimingStatistics
-//
-// Description:		Updates timing statistics for the main run loop, and
-//					periodically logs the results.
-//
-// Input Arguments:
-//		elapsed	= double, elapsed busy time of last frame [sec]
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		None
-//
-//==========================================================================
-void SousVide::UpdateTimingStatistics(double elapsed)
-{
-	// TODO:  This can be improved by breaking active and idle times apart and
-	// reporting statistics independently for each category
-	struct timespec now;
-	if (!TimingUtility::GetCurrentTime(now))
-	{
-		CombinedLogger::GetLogger() << "Warning:  Failed to update time while calculating timing statistics" << std::endl;
-		return;
-	}
-
-	double totalElapsed = TimingUtility::TimespecToSeconds(TimingUtility::GetDeltaTime(now, lastUpdate));
-	lastUpdate = now;
-
-	if (frameTimes.size() < maxElements)
-	{
-		busyTimes.push_back(elapsed);
-		frameTimes.push_back(totalElapsed);
-	}
-	else
-	{
-		busyTimes[keyElement] = elapsed;
-		frameTimes[keyElement] = totalElapsed;
-	}
-	keyElement = (keyElement + 1) % maxElements;
-
-	if (keyElement == 0 && frameTimes.size() > 1)
-	{
-		double totalAverage(AverageVector(frameTimes));
-		double busyAverage(AverageVector(busyTimes));
-
-		CombinedLogger::GetLogger() << "Timing statistics for last "
-			<< maxElements << " frames:" << std::endl;
-		CombinedLogger::GetLogger() << "    Min total period: "
-			<< *std::min_element(frameTimes.begin(), frameTimes.end()) << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Max total period: "
-			<< *std::max_element(frameTimes.begin(), frameTimes.end()) << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Avg total period: "
-			<< totalAverage << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Min busy period: "
-			<< *std::min_element(busyTimes.begin(), busyTimes.end()) << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Max busy period: "
-			<< *std::max_element(busyTimes.begin(), busyTimes.end()) << " sec" << std::endl;
-		CombinedLogger::GetLogger() << "    Avg busy period: "
-			<< busyAverage << " sec (" << busyAverage / totalAverage * 100.0 << "%)" << std::endl;
-	}
-
-	assert(frameTimes.size() == busyTimes.size());
-}
-
-//==========================================================================
-// Class:			SousVide
-// Function:		AverageVector
-//
-// Description:		Computes the average value of the vector values.
-//
-// Input Arguments:
-//		values	= std::vector<double>
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		double
-//
-//==========================================================================
-double SousVide::AverageVector(const std::vector<double> &values)
-{
-	unsigned int i;
-	double sum(0.0);
-	for (i = 0; i < values.size(); i++)
-		sum += values[i];
-
-	return sum / (double)values.size();
 }
 
 //==========================================================================

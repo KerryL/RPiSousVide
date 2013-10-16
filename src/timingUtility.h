@@ -10,6 +10,8 @@
 // Standard C/C++ headers
 #include <string>
 #include <iostream>
+#include <vector>
+#include <map>
 #include <time.h>
 
 class TimingUtility
@@ -19,9 +21,9 @@ public:
 
 	void SetLoopTime(double timeStep);
 	bool TimeLoop(void);
-	double GetLastLoopTime(void) const { return elapsed; };// [sec]
 	double GetTimeStep(void) const { return timeStep; };// [sec]
-	void Reset(void);
+
+	std::string GetTimingStatistics(void) const;
 
 	static clockid_t clockID;
 	static bool GetCurrentTime(struct timespec &ts);
@@ -36,6 +38,19 @@ private:
 	struct timespec loopTime;
 
 	bool loopStarted;
+
+	// For timing statistics
+	void UpdateTimingStatistics(void);
+	double AverageVector(const std::vector<double> &v) const;
+	std::string MakeColumn(double value, unsigned int columnWidth) const;
+	std::string MakeColumn(std::string s, unsigned int columnWidth, char pad = ' ') const;
+
+	unsigned int currentIndex;
+	std::map<double, unsigned int> stepIndices;
+	std::vector<unsigned long> counts;
+	std::vector<double> minFrameTimes, maxFrameTimes, averageFrameTimes;// [sec]
+	std::vector<double> minBusyTimes, maxBusyTimes, averageBusyTimes;// [sec]
+	struct timespec lastUpdate;
 };
 
 #endif// TIMING_UTILITY_H_

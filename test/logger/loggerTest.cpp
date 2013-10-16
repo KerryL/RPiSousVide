@@ -8,12 +8,14 @@
 // Standard C++ headers
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 
 // *nix Standard headers
 #include <unistd.h>
 
 // Local headers
 #include "combinedLogger.h"
+#include "logger.h"
 #include "timeHistoryLog.h"
 
 using namespace std;
@@ -39,13 +41,25 @@ int main(int, char *[])
 
 	cout << "Ending test of TimeHistoryLog" << endl << endl;
 	cout << "Beginning test of CombinedLogger" << endl;
-	cout << "Output will be written to stdout and sousVide.log:" << endl << endl;
+	const string logFileName("loggerTest.log");
+	cout << "Output will be written to stdout and '" << logFileName << "':" << endl << endl;
+
+	ofstream logFile(logFileName.c_str(), ios::out);
+	if (!logFile.is_open() || !logFile.good())
+	{
+		cout << "Failed to open '" << logFileName << "' for output" << endl;
+		return 1;
+	}
+
+	CombinedLogger::GetLogger().Add(new Logger(cout));
+	CombinedLogger::GetLogger().Add(new Logger(logFile));
 
 	// We use a separate function here, because we want to be able to pass our logger
 	// to funcitons taking an ostream argument, and we demonstrate that here
 	LoggingFunctionTakingOStreamArg(CombinedLogger::GetLogger());
 
 	CombinedLogger::Destroy();
+	logFile.close();
 
 	cout << "Ending test of CombinedLogger" << endl;
 

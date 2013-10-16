@@ -317,9 +317,7 @@ void LinuxSocket::ListenThreadEntry(void)
 		readSocks = clients;
 		if (select(maxSock + 1, &readSocks, NULL, NULL, &timeout) == SOCKET_ERROR)
 		{
-			// Failed to accept connection
-			// TODO:  message?  Logger is not thread-safe...
-			// examples all show exit(1) or similar
+			outStream << "  Failed to select sockets:  " << GetLastError() << std::endl;
 			continue;
 		}
 
@@ -336,12 +334,12 @@ void LinuxSocket::ListenThreadEntry(void)
 					newSock = accept(sock, (struct sockaddr*)&clientAddress, &size);
 					if (newSock == SOCKET_ERROR)
 					{
-						// Failed to accept connection
-						// TODO:  message?  Logger is not thread-safe...
+						outStream << "  Failed to accept connection:  " << GetLastError() << std::endl;
 						continue;
 					}
 
-					cout << "connection from: " << inet_ntoa(clientAddress.sin_addr) << ":" << ntohs(clientAddress.sin_port) << endl;
+					/*cout << "  connection from: " << inet_ntoa(clientAddress.sin_addr
+						<< ":" << ntohs(clientAddress.sin_port) << endl;//*/
 
 					FD_SET(newSock, &clients);
 					if (newSock > maxSock)
@@ -374,15 +372,15 @@ void LinuxSocket::HandleClient(int newSock)
 {
 	int errorNumber;
 	if ((errorNumber = pthread_mutex_lock(&bufferMutex)) != 0)
-		outStream << "Error locking mutex (" << errorNumber << ")" << endl;
+		outStream << "  Error locking mutex (" << errorNumber << ")" << endl;
 	clientMessageSize = DoReceive(newSock);
 	if ((errorNumber = pthread_mutex_unlock(&bufferMutex)) != 0)
-		outStream << "Error unlocking mutex (" << errorNumber << ")" << endl;
+		outStream << "  Error unlocking mutex (" << errorNumber << ")" << endl;
 
 	// On disconnect
 	if (clientMessageSize <= 0)
 	{
-		// TODO:  Message?  through some thread-safe means?
+		outStream << "  Client " << newSock << " disconnected" << std::endl;
 		FD_CLR(newSock, &clients);
 		close(newSock);
 	}

@@ -54,7 +54,6 @@ struct SystemConfiguration
 
 	double idleFrequency;// [Hz]
 	double activeFrequency;// [Hz]
-	double statisticsTime;// [sec]
 
 	double maxHeatingRate;// [deg F/sec]
 

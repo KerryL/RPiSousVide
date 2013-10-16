@@ -2,13 +2,8 @@
 // Date:  9/3/2013
 // Auth:  K. Loux
 // Copy:  (c) Kerry Loux 2013
-// Desc:  Logging object.  Handles two logs, one for application status and
-//        one for easy temperature vs. time plotting.  Note that this class
-//		  is NOT thread-safe!
-
-// Standard C++ headers
-#include <cassert>
-#include <iostream>
+// Desc:  Logging object that permits writing to multiple logs simultaneously
+//        and from multiple threads.
 
 // Local headers
 #include "combinedLogger.h"
@@ -30,8 +25,7 @@
 //
 //==========================================================================
 CombinedLogger *CombinedLogger::logger = NULL;
-const std::string CombinedLogger::logFileName = "sousVide.log";
-std::ofstream CombinedLogger::file(logFileName.c_str(), std::ios::out);
+pthread_mutex_t CombinedLogger::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 //==========================================================================
 // Class:			CombinedLogger
@@ -51,8 +45,7 @@ std::ofstream CombinedLogger::file(logFileName.c_str(), std::ios::out);
 //==========================================================================
 CombinedLogger::~CombinedLogger()
 {
-	file.close();
-
+	// No lock necessary, since this can only be reached through Destroy() (which includes a lock)
 	unsigned int i;
 	for (i = 0; i < logs.size(); i++)
 		delete logs[i];
@@ -76,12 +69,13 @@ CombinedLogger::~CombinedLogger()
 //==========================================================================
 CombinedLogger& CombinedLogger::GetLogger(void)
 {
+	// Check, lock, then check again to ensure we don't encounter a race condition
 	if (!logger)
 	{
-		logger = new CombinedLogger();
+		MutexLocker lock(mutex);
 
-		logger->Add(new Logger(std::cout));
-		logger->Add(new Logger(file));
+		if (!logger)
+			logger = new CombinedLogger();
 	}
 
 	return *logger;
@@ -105,6 +99,8 @@ CombinedLogger& CombinedLogger::GetLogger(void)
 //==========================================================================
 void CombinedLogger::Destroy(void)
 {
+	MutexLocker lock(mutex);
+
 	delete logger;
 	logger = NULL;
 }
@@ -116,7 +112,7 @@ void CombinedLogger::Destroy(void)
 // Description:		Adds a log sink to the vector.
 //
 // Input Arguments:
-//		log	= Logger*
+//		log	= std::ostream*
 //
 // Output Arguments:
 //		None
@@ -125,7 +121,9 @@ void CombinedLogger::Destroy(void)
 //		None
 //
 //==========================================================================
-void CombinedLogger::Add(Logger* log)
+void CombinedLogger::Add(std::ostream* log)
 {
+	assert(log);
+	MutexLocker lock(mutex);
 	logs.push_back(log);
 }

@@ -9,7 +9,7 @@
 #ifndef MUTEX_HELPER_H_
 #define MUTEX_HELPER_H_
 
-// pThread headers
+// pThread headers (must be first!)
 #include <pthread.h>
 
 class MutexLocker

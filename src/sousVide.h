@@ -73,13 +73,6 @@ private:
 
 	TimingUtility loopTimer;
 
-	// For maintaining timing statistics
-	void UpdateTimingStatistics(double elapsed);
-	static double AverageVector(const std::vector<double> &values);
-	unsigned int keyElement, maxElements;
-	std::vector<double> frameTimes, busyTimes;// [sec]
-	struct timespec lastUpdate;
-
 	NetworkInterface *ni;
 	void ProcessMessage(const FrontToBackMessage &recievedMessage);
 	BackToFrontMessage AssembleMessage(void) const;

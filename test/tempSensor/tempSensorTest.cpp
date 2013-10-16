@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 		heading3.append(string(columnWidth,'-'));
 	}
 
-	struct timespec start, stop, resolution;
+	struct timespec resolution;
 	TimingUtility loopTimer(0.85);
 	if (!loopTimer.GetResolution(resolution))
 		cout << "Failed to read timer resolution" << endl;
@@ -89,9 +89,6 @@ int main(int argc, char *argv[])
 	cout << heading2 << endl;
 	cout << heading3 << endl;
 
-	if (!TimingUtility::GetCurrentTime(start))
-		cout << "Failed to start execution timer" << endl;
-
 	const unsigned int readings(10);
 	for (i = 0; i < readings * sensorList.size(); i++)
 	{
@@ -105,14 +102,7 @@ int main(int argc, char *argv[])
 			cout << endl;
 	}
 
-	if (!TimingUtility::GetCurrentTime(stop))
-		cout << "Failed to stop execution timer" << endl;
-	else
-	{
-		cout << "Average actual read time:  ";
-		cout << TimingUtility::TimespecToSeconds(TimingUtility::GetDeltaTime(stop, start))
-			/ double(readings * sensorList.size()) << " sec" << endl;
-	}
+	cout << loopTimer.GetTimingStatistics() << endl;
 
 	for (i = 0; i < sensorList.size(); i++)
 		delete tsArray[i];

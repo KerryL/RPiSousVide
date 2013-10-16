@@ -14,7 +14,8 @@ DIRS = \
 SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
 	.src/logger.cpp \
 	.src/combinedLogger.cpp \
-	.src/timeHistoryLog.cpp
+	.src/timeHistoryLog.cpp \
+	.src/mutexLocker.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
@@ -28,6 +29,7 @@ copy:
 	cp ../../src/logger.cpp .src/
 	cp ../../src/combinedLogger.cpp .src/
 	cp ../../src/timeHistoryLog.cpp .src/
+	cp ../../src/mutexLocker.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

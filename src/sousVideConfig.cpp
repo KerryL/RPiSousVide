@@ -51,7 +51,6 @@ void SousVideConfig::BuildConfigItems(void)
 
 	AddConfigItem("idleFrequency", system.idleFrequency);
 	AddConfigItem("activeFrequency", system.activeFrequency);
-	AddConfigItem("statisticsTime", system.statisticsTime);
 	AddConfigItem("maxHeatingRate", system.maxHeatingRate);
 	AddConfigItem("maxAutoTuneTime", system.maxAutoTuneTime);
 	AddConfigItem("maxAutoTuneTemperatureRise", system.maxAutoTuneTemperatureRise);
@@ -100,7 +99,6 @@ void SousVideConfig::AssignDefaults(void)
 
 	system.idleFrequency = 0.2;// [Hz]
 	system.activeFrequency = 1.0;// [Hz]
-	system.statisticsTime = 10.0;// [sec]
 	system.maxHeatingRate = -1.0;// [deg F/sec] invalid -> must be specified by user
 	system.maxAutoTuneTime = 30.0 * 60.0;// [sec]
 	system.maxAutoTuneTemperatureRise = 15.0;// [deg F]
@@ -383,12 +381,6 @@ bool SousVideConfig::SystemConfigIsOK(void) const
 	if (system.activeFrequency <= 0.0)
 	{
 		outStream << "System:  " << GetKey(system.activeFrequency) << " must be strictly positive" << std::endl;
-		ok = false;
-	}
-
-	if (system.statisticsTime < 0.0)
-	{
-		outStream << "System:  " << GetKey(system.statisticsTime) << " must be positive" << std::endl;
 		ok = false;
 	}
 
