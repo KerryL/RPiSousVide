@@ -12,10 +12,13 @@ DIRS = \
 
 # Source files
 SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
-	.src/cJSON.cpp
+	$(foreach dir, $(DIRS), $(wildcard $(dir)/*.c)) \
+	.src/cJSON.c
 
 # Object files
-OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
+CPPOBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
+#OBJS = $(CPPOBJS:.c=.o)
+OBJS = $(CPPOBJS:.c=__C.o)
 
 .PHONY: all clean
 
@@ -23,13 +26,17 @@ all: $(TARGET)
 
 copy:
 	$(MKDIR) .src/
-	cp ../../src/cJSON.cpp .src/
+	cp ../../src/cJSON.cpp .src/cJSON.c
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)
 	$(CC) $(OBJS) $(LDFLAGS) -L$(LIBOUTDIR) $(addprefix -l,$(PSLIB)) -o $(BINDIR)$@
 
 $(OBJDIR)%.o: %.cpp copy
+	$(MKDIR) $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)%__C.o: %.c copy
 	$(MKDIR) $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 

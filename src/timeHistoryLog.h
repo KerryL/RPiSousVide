@@ -10,7 +10,6 @@
 
 // Standard C++ headers
 #include <iostream>
-#include <sstream>
 #include <vector>
 #include <ctime>
 
@@ -23,33 +22,25 @@ private:
 	class TimeHistoryStreamBuffer : public std::stringbuf
 	{
 	public:
-		TimeHistoryStreamBuffer(std::ostream &str) : output(str) { started = false; };
+		TimeHistoryStreamBuffer(std::ostream &str, const char delimiter);
+		~TimeHistoryStreamBuffer() {};
 
-		virtual int sync(void)
-		{
-			// TODO:  Ensure proper number of columns?
-			// NOTE:  Time stamp is generated when std::endl is passed (or stream is flushed),
-			//        thus, when used, it is recommended to pass all data and the endl as close
-			//        together as possible (i.e. the data in the first column may be older than
-			//        the data in the last column, but they will share a common time stamp).
-			if (started)
-				output << GetTime() << str();
-			else
-				output << str();
-			str("");
-			output.flush();
-			return 0;
-		};
+		virtual int sync(void);
 
 		void MarkStartTime(void);
+		void IncrementColumns(void);
 
 	private:
 		std::ostream& output;
+		const char delimiter;
 
 		bool started;
 
-		std::string GetTime(void);
 		struct timeval start;
+		unsigned int columns;
+
+		std::string GetTime(void);
+		unsigned int GetColumnCount(void) const;
 	} buffer;
 
 	const char delimiter;
@@ -60,6 +51,7 @@ private:
 
 public:
 	TimeHistoryLog(std::ostream& str, char delimiter = ',');
+	~TimeHistoryLog() {};
 
 	void AddColumn(std::string title, std::string units);
 
@@ -67,6 +59,24 @@ public:
 	friend TimeHistoryLog& operator<<(TimeHistoryLog& log, T const& value);
 };
 
+//==========================================================================
+// Class:			TimeHistoryLog (friend)
+// Function:		operator<<
+//
+// Description:		Overload of stream insertion operator.  Handles writing
+//					of column headings.
+//
+// Input Arguments:
+//		log		= TimeHistoryLog&
+//		value	= T const&
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		TimeHistoryLog&
+//
+//==========================================================================
 template<typename T>
 TimeHistoryLog& operator<<(TimeHistoryLog& log, T const& value)
 {

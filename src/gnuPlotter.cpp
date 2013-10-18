@@ -43,9 +43,7 @@
 //
 //==========================================================================
 #ifdef WIN32
-// Not sure why I need the full path - it should be on my path...
-// TODO:  Fix this (windows problem only)
-const std::string GNUPlotter::gnuPlotName = "\"C:\\Program Files (x86)\\gnuplot\\bin\\pgnuplot.exe\"";
+const std::string GNUPlotter::gnuPlotName = "pgnuplot.exe";
 #else
 const std::string GNUPlotter::gnuPlotName = "gnuplot";
 #endif

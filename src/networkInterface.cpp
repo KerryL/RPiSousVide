@@ -12,10 +12,10 @@
 
 // Local headers
 #include "networkInterface.h"
+#include "sousVideConfig.h"
 #include "networkMessageDefs.h"
 #include "linuxSocket.h"
 #include "mutexLocker.h"
-#include "combinedLogger.h"
 
 //==========================================================================
 // Class:			NetworkInterface
@@ -25,6 +25,7 @@
 //
 // Input Arguments:
 //		configuration	= NetworkConfiguration
+//		outStream		= std::ostream&
 //
 // Output Arguments:
 //		None
@@ -33,9 +34,10 @@
 //		None
 //
 //==========================================================================
-NetworkInterface::NetworkInterface(NetworkConfiguration configuration)
+NetworkInterface::NetworkInterface(NetworkConfiguration configuration,
+	std::ostream &outStream) : outStream(outStream)
 {
-	socket = new LinuxSocket(LinuxSocket::SocketTCPServer, CombinedLogger::GetLogger());
+	socket = new LinuxSocket(LinuxSocket::SocketTCPServer, outStream);
 	socket->Create(configuration.port);
 	socket->SetBlocking(false);
 
@@ -99,7 +101,7 @@ bool NetworkInterface::ReceiveData(FrontToBackMessage &message)
 	else
 	{
 		// TODO:  Do some extra work in case multiple messages arrive at the same time?
-		CombinedLogger::GetLogger() << "Message size mismatch in NetworkInterface::ReceiveData" << std::endl;
+		outStream << "Message size mismatch in NetworkInterface::ReceiveData" << std::endl;
 	}
 
 	return false;

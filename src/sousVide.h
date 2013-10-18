@@ -14,10 +14,6 @@
 #include <vector>
 #include <time.h>
 
-// Local headers
-#include "sousVideConfig.h"
-#include "timingUtility.h"
-
 // Local forward declarations
 class NetworkInterface;
 class TemperatureController;
@@ -27,6 +23,8 @@ struct FrontToBackMessage;
 struct BackToFrontMessage;
 class GNUPlotter;
 class TimingUtility;
+class SousVideConfig;
+class CombinedLogger;
 
 class SousVide
 {
@@ -65,13 +63,18 @@ private:
 	static const std::string configFileName;
 	static const std::string autoTuneLogName;
 
-	SousVideConfig configuration;
+	bool Initialize(void);
+
+	SousVideConfig *configuration;
 	bool ReadConfiguration(void);
 
 	double plateauTemperature;// [deg F]
 	double soakTime;// [sec]
 
-	TimingUtility loopTimer;
+	CombinedLogger *logger;
+	std::ofstream logFile;
+
+	TimingUtility *loopTimer;
 
 	NetworkInterface *ni;
 	void ProcessMessage(const FrontToBackMessage &recievedMessage);

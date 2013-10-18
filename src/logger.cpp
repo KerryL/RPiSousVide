@@ -12,7 +12,7 @@
 #include "logger.h"
 
 //==========================================================================
-// Class:			Logger
+// Class:			Logger::LoggerStreamBuffer
 // Function:		GetTimeStamp
 //
 // Description:		Returns a time stamp string to prepend to each message.
@@ -42,4 +42,29 @@ std::string Logger::LoggerStreamBuffer::GetTimeStamp(void)
 		<< std::setw(2) << timeInfo->tm_sec;
 
 	return timeStamp.str();
+}
+
+//==========================================================================
+// Class:			Logger::LoggerStreamBuffer
+// Function:		sync
+//
+// Description:		Override of standard sync method.  Called when stream encounters
+//					endl object.  Handles addition of timestamp to the stream.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		int
+//
+//==========================================================================
+int Logger::LoggerStreamBuffer::sync(void)
+{
+	output << GetTimeStamp() << " : " << str();
+	str("");
+	output.flush();
+	return 0;
 }

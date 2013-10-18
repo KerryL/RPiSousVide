@@ -2,7 +2,7 @@ Raspbery Pi Sous Vide Controller
 
 This application includes an interface to gnuplot (using pipes) that is roughly based on gnuplot_i module written by N. Devillard <nDevil@eso.org>.  More information can be obtained from http://ndevilla.free.fr/gnuplot/.
 
-This application uses cJSON, which is licesned under the MIT license.  Read more here:  sourceforge.net/project/cjson.  To make compiling easier (to avoid modifying the makefile), cJSON.c was renamed to cJSON.cpp.
+This application uses cJSON, which is licesned under the MIT license.  Read more here:  sourceforge.net/project/cjson.  To make compiling easier, cJSON.c was renamed to cJSON.cpp.  The JSON test renames the file back to .c I was curious as to exactly how much kludge it would take to get it working - the comparative difficulty and ugliness makes the renaming solution so much more attractive.
 
 Starting with a brand new Raspberry Pi, follow these instructions to get started.
 
@@ -25,14 +25,14 @@ http://www.jeremymorgan.com/tutorials/raspberry-pi/how-to-raspberry-pi-web-serve
 
 I skipped the installation of MySQL, and left all of the apache defaults as-is.
 
-If you use vi as your text editor, you'll probably want to create a .vimrc file and add "set nocp" (by default, arrow keys don't navigate in insert mode, instead the insert A, B, etc.)
+If you use vi as your text editor, you'll probably want to create a .vimrc file and add "set nocp" (by default, arrow keys don't navigate in insert mode, instead they insert A, B, etc.)
 
 4.  Install wiringPi library by following the instructions here:
 http://wiringpi.com/download-and-install/.  I was originally planning on writing the minimal amount of low-level stuff myself, but two things changed my mind:  Lack of documentation on GPIO functions (you'll find documentation that tells you it is possible to set a pull-up or pull-down for each input pin, but good luck figuring out how to do it - the easiest way I could figure out was by looking at the source code for wiringPi, which implements this feature - and then after I got looking at Wiring Pi, I found that it's not a very big library, implementing only a few more things than we were going to need for this project.
 
 Again, cross-compiling makes stuff more difficult.  The instructions above are fine if you're compiling on the RPi.  If you want to cross-compile, you'll need to make the following changes:
-- change the makefile (wiringPi/wiringPi/Makefile), line 36 to use the cross-compiler built in step 2 above.  If you follow exactly as the instructions are writting, the compiler would be arm-unknown-linux-gnueabi-g++.  Also, the makefile doesn't define macros for the archiver and ranlib.  You'll need to define those yourself and use those found in the x-tools binary directory you built, then use them in place of ar and ranlib below.
-- the INSTALL file has instructions for building a statically-linked library.  If we cross-compile, our options are either link it statically, or install it on the Pi, too, in order to use the dynamic library (which is what builds by default).  I'm shooting for statically linking, at first, anyway, we'll see how it goes.
+- change the makefile (wiringPi/wiringPi/Makefile), line 36 to use the cross-compiler built in step 2 above.  If you follow exactly as the instructions are written, the compiler would be arm-unknown-linux-gnueabi-g++.  Also, the makefile doesn't define macros for the archiver and ranlib.  You'll need to define those yourself and use those found in the x-tools binary directory you built, then use them in place of ar and ranlib below.
+- the INSTALL file has instructions for building a statically-linked library.  If we cross-compile, our options are either link it statically, or install it on the Pi, too, in order to use the dynamic library (which is what builds by default).  I used static linking, and it seems to be working just fine.
 
 5.  Install gnuplot on the Raspberry Pi.  Execute the following command:
 $ sudo apt-get install gnuplot-x11

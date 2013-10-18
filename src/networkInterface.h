@@ -9,6 +9,7 @@
 
 // Standard C++ headers
 #include <string>
+#include <iostream>
 
 // cJSON forward declarations
 struct cJSON;
@@ -22,7 +23,7 @@ class LinuxSocket;
 class NetworkInterface
 {
 public:
-	NetworkInterface(NetworkConfiguration configuration);
+	NetworkInterface(NetworkConfiguration configuration, std::ostream &outStream);
 	~NetworkInterface();
 
 	bool ReceiveData(FrontToBackMessage &message);
@@ -31,6 +32,8 @@ public:
 	bool ClientConnected(void) const;
 
 private:
+	std::ostream &outStream;
+
 	LinuxSocket *socket;
 	char *buffer;
 

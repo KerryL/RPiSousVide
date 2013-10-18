@@ -32,6 +32,8 @@
 #include "networkMessageDefs.h"
 #include "autoTuner.h"
 #include "gnuPlotter.h"
+#include "sousVideConfig.h"
+#include "timingUtility.h"
 
 //==========================================================================
 // Class:			None
@@ -70,25 +72,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// Configure the logger object
-	const std::string logFileName("sousVide.log");
-	std::ofstream logFile(logFileName.c_str(), std::ios::out);
-	if (!logFile.is_open() || !logFile.good())
-	{
-		std::cout << "Failed to open '" << logFileName << "' for output" << std::endl;
-		return 1;
-	}
-
-	CombinedLogger::GetLogger().Add(new Logger(std::cout));
-	CombinedLogger::GetLogger().Add(new Logger(logFile));
-
 	SousVide *sousVide = new SousVide(autoTune);
 	sousVide->Run();
 	delete sousVide;
-
-	// Clean up the logger object
-	CombinedLogger::GetLogger().Destroy();
-	logFile.close();
 
 	return 0;
 }
@@ -129,62 +115,16 @@ const std::string SousVide::plotFileName = "temperaturePlot.png";
 //		None
 //
 //==========================================================================
-SousVide::SousVide(bool autoTune) : configuration(CombinedLogger::GetLogger()),
-	loopTimer(1.0, CombinedLogger::GetLogger())
+SousVide::SousVide(bool autoTune)
 {
 	state = StateOff;
 	nextState = state;
 
-	if (!ReadConfiguration())
-	{
-		CombinedLogger::GetLogger() << "Failed to read configuration file.  Exiting..." << std::endl;
-		exit(1);
-	}
-
-	std::string sensorID(configuration.io.sensorID);
-	if (sensorID.empty())
-	{
-		std::vector<std::string> sensorList = TemperatureSensor::GetConnectedSensors();
-		if (sensorList.size() == 0)
-		{
-			CombinedLogger::GetLogger() << "No temperature sensor connected.  Exiting..." << std::endl;
-			exit(1);
-		}
-		else if (sensorList.size() > 1)
-		{
-			CombinedLogger::GetLogger() << "Multiple temperature sensors detected.  "
-				<< "Sensor ID must be specified in config file (use field 'sensorID')." << std::endl;
-			exit(1);
-		}
-
-		sensorID = sensorList[0];
-	}
-
 	if (autoTune)
 	{
-		CombinedLogger::GetLogger() << "System started in auto-tune mode" << std::endl;
+		std::cout << "System started in auto-tune mode" << std::endl;
 		nextState = StateAutoTune;
 	}
-
-	sendClientMessage = false;
-
-	ni = new NetworkInterface(configuration.network);
-	controller = new TemperatureController(1.0 / configuration.system.activeFrequency,
-		configuration.controller,
-		new TemperatureSensor(sensorID, CombinedLogger::GetLogger()),
-		new PWMOutput(configuration.io.heaterRelayPin));
-	controller->SetRateLimit(configuration.system.maxHeatingRate);
-	pumpRelay = new GPIO(configuration.io.pumpRelayPin, GPIO::DirectionOutput);
-
-	if (!controller->PWMOutputOK())
-	{
-		CombinedLogger::GetLogger() << "PWM Frequency is out-of-range.  Exiting..." << std::endl;
-		exit(1);
-	}
-
-	thLog = NULL;
-	thLogFile = NULL;
-	plotter = NULL;
 }
 
 //==========================================================================
@@ -211,6 +151,95 @@ SousVide::~SousVide()
 	delete plotter;
 
 	CleanUpTimeHistoryLog();
+
+	delete logger;
+	logFile.close();
+
+	delete configuration;
+	delete loopTimer; 
+}
+
+
+//==========================================================================
+// Class:			SousVide
+// Function:		Initialize
+//
+// Description:		Initializes the sous vide application.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for success, false otherwise
+//
+//==========================================================================
+bool SousVide::Initialize(void)
+{
+	const std::string logFileName("sousVide.log");
+	logFile.open(logFileName.c_str(), std::ios::out);
+	if (!logFile.is_open() || !logFile.good())
+	{
+		std::cout << "Failed to open '" << logFileName << "' for output" << std::endl;
+		return false;
+	}
+
+	logger = new CombinedLogger;
+	logger->Add(new Logger(std::cout));
+	logger->Add(new Logger(logFile));
+
+	configuration = new SousVideConfig(*logger);
+	if (!ReadConfiguration())
+	{
+		*logger << "Failed to read configuration file.  Exiting..." << std::endl;
+		return false;
+	}
+
+	loopTimer = new TimingUtility(1.0 / configuration->system.idleFrequency, *logger);
+
+
+	std::string sensorID(configuration->io.sensorID);
+	if (sensorID.empty())
+	{
+		std::vector<std::string> sensorList = TemperatureSensor::GetConnectedSensors();
+		if (sensorList.size() == 0)
+		{
+			*logger << "No temperature sensor connected.  Exiting..." << std::endl;
+			return false;
+		}
+		else if (sensorList.size() > 1)
+		{
+			*logger << "Multiple temperature sensors detected.  "
+				<< "Sensor ID must be specified in config file (use field 'sensorID')." << std::endl;
+			return false;
+		}
+
+		sensorID = sensorList[0];
+	}
+
+	sendClientMessage = false;
+
+	ni = new NetworkInterface(configuration->network, *logger);
+	controller = new TemperatureController(1.0 / configuration->system.activeFrequency,
+		configuration->controller,
+		new TemperatureSensor(sensorID, *logger),
+		new PWMOutput(configuration->io.heaterRelayPin));
+	controller->SetRateLimit(configuration->system.maxHeatingRate);
+	pumpRelay = new GPIO(configuration->io.pumpRelayPin, GPIO::DirectionOutput);
+
+	if (!controller->PWMOutputOK())
+	{
+		*logger << "PWM Frequency is out-of-range.  Exiting..." << std::endl;
+		return false;
+	}
+
+	thLog = NULL;
+	thLogFile = NULL;
+	plotter = NULL;
+
+	return true;
 }
 
 //==========================================================================
@@ -252,13 +281,18 @@ void SousVide::PrintUsageInfo(std::string name)
 //==========================================================================
 void SousVide::Run()
 {
-	loopTimer.SetLoopTime(1.0 / configuration.system.idleFrequency);
+	if (!Initialize())
+	{
+		std::cout << "Initialization failed" << std::endl;
+		return;
+	}
+
 	FrontToBackMessage receivedMessage;
 
 	while (true)
 	{
-		if (!loopTimer.TimeLoop())
-			CombinedLogger::GetLogger() << "Warning:  Main loop timing failed" << std::endl;
+		if (!loopTimer->TimeLoop())
+			*logger << "Warning:  Main loop timing failed" << std::endl;
 
 		// Do the core work for the application
 		if (ni->ReceiveData(receivedMessage))
@@ -270,7 +304,7 @@ void SousVide::Run()
 		if (sendClientMessage)
 		{
 			if (!ni->SendData(AssembleMessage()))
-				CombinedLogger::GetLogger() << "Failed to send message to client(s)" << std::endl;
+				*logger << "Failed to send message to client(s)" << std::endl;
 			sendClientMessage = false;
 		}
 	}
@@ -349,9 +383,9 @@ bool SousVide::TemperatureTrackingToleranceExceeded(void) const
 	double actualTemperature(controller->GetActualTemperature());
 	double cmdTemperature(controller->GetCommandedTemperature());
 
-	if (fabs(cmdTemperature - actualTemperature) > configuration.system.interlock.temperatureTolerance)
+	if (fabs(cmdTemperature - actualTemperature) > configuration->system.interlock.temperatureTolerance)
 	{
-		CombinedLogger::GetLogger()
+		*logger
 			<< "INTERLOCK:  Temperature tolerance exceeded (cmd = "
 			<< cmdTemperature << " deg F, act = "
 			<< actualTemperature << " deg F)" << std::endl;
@@ -392,9 +426,9 @@ bool SousVide::SaturationTimeExceeded(void)
 	}
 
 	time_t now(time(NULL));
-	if (difftime(now, saturationStartTime) > configuration.system.interlock.maxSaturationTime)
+	if (difftime(now, saturationStartTime) > configuration->system.interlock.maxSaturationTime)
 	{
-		CombinedLogger::GetLogger()
+		*logger
 			<< "PWM output max. saturation time exceeded" << std::endl;
 		return true;
 	}
@@ -423,9 +457,9 @@ bool SousVide::MaximumTemperatureExceeded(void) const
 {
 	double actualTemperature(controller->GetActualTemperature());
 
-	if (actualTemperature > configuration.system.interlock.maxTemperature)
+	if (actualTemperature > configuration->system.interlock.maxTemperature)
 	{
-		CombinedLogger::GetLogger()
+		*logger
 			<< "INTERLOCK:  Temperature limit exceeded (act = "
 			<< actualTemperature << " deg F)" << std::endl;
 		return true;
@@ -455,7 +489,7 @@ bool SousVide::TemperatureSensorFailed(void) const
 {
 	if (!controller->TemperatureSensorOK())
 	{
-		CombinedLogger::GetLogger() << "INTERLOCK:  Bad result from temperature sensor" << std::endl;
+		*logger << "INTERLOCK:  Bad result from temperature sensor" << std::endl;
 		return true;
 	}
 
@@ -480,7 +514,7 @@ bool SousVide::TemperatureSensorFailed(void) const
 //==========================================================================
 bool SousVide::ReadConfiguration(void)
 {
-	return configuration.ReadConfiguration(configFileName);
+	return configuration->ReadConfiguration(configFileName);
 }
 
 //==========================================================================
@@ -534,36 +568,36 @@ void SousVide::EnterState(void)
 
 	sendClientMessage = true;
 
-	CombinedLogger::GetLogger() << "Entering State " << GetStateName() << std::endl;
+	*logger << "Entering State " << GetStateName() << std::endl;
 
 	if (state == StateOff)
 	{
 	}
 	else if (state == StateInitializing)
 	{
-		NetworkConfiguration oldNetworkConfig = configuration.network;
-		IOConfiguration oldIOConfig = configuration.io;
+		NetworkConfiguration oldNetworkConfig = configuration->network;
+		IOConfiguration oldIOConfig = configuration->io;
 		if (ReadConfiguration())
 		{
-			if (configuration.network.port != oldNetworkConfig.port)
-				CombinedLogger::GetLogger() << "Network port number change will take effect next time the application is started" << std::endl;
-			if (configuration.io.pumpRelayPin != oldIOConfig.pumpRelayPin ||
-				configuration.io.heaterRelayPin != oldIOConfig.heaterRelayPin ||
-				configuration.io.sensorID != oldIOConfig.sensorID)
-				CombinedLogger::GetLogger() << "I/O configuration changes will take effect next time the application is started" << std::endl;
+			if (configuration->network.port != oldNetworkConfig.port)
+				*logger << "Network port number change will take effect next time the application is started" << std::endl;
+			if (configuration->io.pumpRelayPin != oldIOConfig.pumpRelayPin ||
+				configuration->io.heaterRelayPin != oldIOConfig.heaterRelayPin ||
+				configuration->io.sensorID != oldIOConfig.sensorID)
+				*logger << "I/O configuration changes will take effect next time the application is started" << std::endl;
 
-			controller->UpdateConfiguration(configuration.controller);
+			controller->UpdateConfiguration(configuration->controller);
 			// Everything else is read directly from the configuration
 			// object each time it is used, so no updating is necessary
 		}
 		else
 		{
-			CombinedLogger::GetLogger() << "Failed to re-load configuration" << std::endl;
+			*logger << "Failed to re-load configuration" << std::endl;
 			// TODO:  Reply to clients to let them know about some invalid value?
 			nextState = StateError;
 		}
 
-		loopTimer.SetLoopTime(1.0 / configuration.system.idleFrequency);
+		loopTimer->SetLoopTime(1.0 / configuration->system.idleFrequency);
 	}
 	else if (state == StateReady)
 	{
@@ -667,7 +701,7 @@ void SousVide::ProcessState(void)
 			controller->GetActualTemperature());
 
 		if (fabs(controller->GetActualTemperature() - plateauTemperature)
-			< configuration.controller.plateauTolerance)
+			< configuration->controller.plateauTolerance)
 			nextState = StateSoaking;
 
 		if (command == CmdStop)
@@ -708,7 +742,7 @@ void SousVide::ProcessState(void)
 	else if (state == StateError)
 	{
 		time_t now = time(NULL);
-		if (difftime(now, stateStartTime) > configuration.system.interlock.minErrorTime &&
+		if (difftime(now, stateStartTime) > configuration->system.interlock.minErrorTime &&
 			command == CmdReset)
 			nextState = StateInitializing;
 	}
@@ -720,8 +754,8 @@ void SousVide::ProcessState(void)
 			controller->GetActualTemperature());
 
 		time_t now = time(NULL);
-		if (difftime(now, stateStartTime) > configuration.system.maxAutoTuneTime ||
-			controller->GetActualTemperature() - startTemperature > configuration.system.maxAutoTuneTemperatureRise)
+		if (difftime(now, stateStartTime) > configuration->system.maxAutoTuneTime ||
+			controller->GetActualTemperature() - startTemperature > configuration->system.maxAutoTuneTemperatureRise)
 			nextState = StateInitializing;
 
 		if (command == CmdStop)
@@ -754,7 +788,7 @@ void SousVide::ExitState(void)
 {
 	assert(state >= 0 && state < StateCount);
 
-	CombinedLogger::GetLogger() << "Exiting State " << GetStateName() << std::endl;
+	*logger << "Exiting State " << GetStateName() << std::endl;
 
 	if (state == StateOff)
 	{
@@ -770,7 +804,7 @@ void SousVide::ExitState(void)
 	else if (state == StateSoaking)
 	{
 		ExitActiveState();
-		CombinedLogger::GetLogger() << loopTimer.GetTimingStatistics();
+		*logger << loopTimer->GetTimingStatistics();
 	}
 	else if (state == StateCooling)
 	{
@@ -787,32 +821,32 @@ void SousVide::ExitState(void)
 		if (!CleanUpAutoTuneLog(time, temp))
 			return;
 
-		AutoTuner tuner(CombinedLogger::GetLogger());
+		AutoTuner tuner(*logger);
 
 		if (tuner.ProcessAutoTuneData(time, temp))
 		{
-			CombinedLogger::GetLogger() << "Model parameters:" << std::endl;
-			CombinedLogger::GetLogger() << "  c1 = " << tuner.GetC1() << " 1/sec" << std::endl;
-			CombinedLogger::GetLogger() << "  c2 = " << tuner.GetC2() << " deg F/BTU" << std::endl;
+			*logger << "Model parameters:" << std::endl;
+			*logger << "  c1 = " << tuner.GetC1() << " 1/sec" << std::endl;
+			*logger << "  c2 = " << tuner.GetC2() << " deg F/BTU" << std::endl;
 
-			CombinedLogger::GetLogger() << "Recommended Gains:" << std::endl;
-			CombinedLogger::GetLogger() << "  Kp = " << tuner.GetKp() << " %/deg F" << std::endl;
-			CombinedLogger::GetLogger() << "  Ti = " << tuner.GetTi() << " sec" << std::endl;
-			CombinedLogger::GetLogger() << "  Kf = " << tuner.GetKf() << " deg F/BTU" << std::endl;
+			*logger << "Recommended Gains:" << std::endl;
+			*logger << "  Kp = " << tuner.GetKp() << " %/deg F" << std::endl;
+			*logger << "  Ti = " << tuner.GetTi() << " sec" << std::endl;
+			*logger << "  Kf = " << tuner.GetKf() << " deg F/BTU" << std::endl;
 
-			CombinedLogger::GetLogger() << "Other parameters:" << std::endl;
-			CombinedLogger::GetLogger() << "  Max. Heat Rate = " << tuner.GetMaxHeatRate() << " deg F/sec" << std::endl;
-			CombinedLogger::GetLogger() << "  Ambient Temp. = " << tuner.GetAmbientTemperature() << " deg F" << std::endl;
+			*logger << "Other parameters:" << std::endl;
+			*logger << "  Max. Heat Rate = " << tuner.GetMaxHeatRate() << " deg F/sec" << std::endl;
+			*logger << "  Ambient Temp. = " << tuner.GetAmbientTemperature() << " deg F" << std::endl;
 
-			CombinedLogger::GetLogger() << "Writing new gains and heat rate to config file" << std::endl;
-			configuration.WriteConfiguration(configFileName, "kp", tuner.GetKp());
-			configuration.WriteConfiguration(configFileName, "ti", tuner.GetTi());
-			configuration.WriteConfiguration(configFileName, "kf", tuner.GetKf());
-			configuration.WriteConfiguration(configFileName, "maxHeatingRate", tuner.GetMaxHeatRate());
+			*logger << "Writing new gains and heat rate to config file" << std::endl;
+			configuration->WriteConfiguration(configFileName, "kp", tuner.GetKp());
+			configuration->WriteConfiguration(configFileName, "ti", tuner.GetTi());
+			configuration->WriteConfiguration(configFileName, "kf", tuner.GetKf());
+			configuration->WriteConfiguration(configFileName, "maxHeatingRate", tuner.GetMaxHeatRate());
 			
 			std::vector<double> control(time.size(), 1.0), simTemp;
 			if (!tuner.GetSimulatedOpenLoopResponse(time, control, simTemp, temp[0]))
-				CombinedLogger::GetLogger() << "Simulation failed" << std::endl;
+				*logger << "Simulation failed" << std::endl;
 
 			// This is probably only necessary for verification of operation/debuggin and should
 			// be removed after we're sure everything is OK
@@ -820,7 +854,7 @@ void SousVide::ExitState(void)
 			std::ofstream file("autoTuneSimulation.log", std::ios::out);
 			if (!file.is_open() || !file.good())
 			{
-				CombinedLogger::GetLogger() << "Failed to write simulation data" << std::endl;
+				*logger << "Failed to write simulation data" << std::endl;
 				return;
 			}
 
@@ -834,7 +868,7 @@ void SousVide::ExitState(void)
 			file.close();//*/
 		}
 		else
-			CombinedLogger::GetLogger() << "Auto-tune failed" << std::endl;
+			*logger << "Auto-tune failed" << std::endl;
 	}
 	else
 		assert(false);
@@ -899,7 +933,7 @@ std::string SousVide::GetStateName(void) const
 //==========================================================================
 void SousVide::EnterActiveState(void)
 {
-	loopTimer.SetLoopTime(1.0 / configuration.system.activeFrequency);
+	loopTimer->SetLoopTime(1.0 / configuration->system.activeFrequency);
 	pumpRelay->SetOutput(true);
 	controller->SetOutputEnable(true);
 }
@@ -923,7 +957,7 @@ void SousVide::EnterActiveState(void)
 //==========================================================================
 void SousVide::ExitActiveState(void)
 {
-	loopTimer.SetLoopTime(1.0 / configuration.system.idleFrequency);
+	loopTimer->SetLoopTime(1.0 / configuration->system.idleFrequency);
 	pumpRelay->SetOutput(false);
 	controller->SetOutputEnable(false);
 }
@@ -953,44 +987,44 @@ void SousVide::ProcessMessage(const FrontToBackMessage &receivedMessage)
 			plateauTemperature = receivedMessage.plateauTemperature;
 			soakTime = receivedMessage.soakTime;
 
-			CombinedLogger::GetLogger() << "Received START command (" << soakTime
+			*logger << "Received START command (" << soakTime
 				<< " sec at " << plateauTemperature << " deg F)" << std::endl;
 		}
 		else
-			CombinedLogger::GetLogger()
+			*logger
 			<< "Received START command, but system is not in Ready state (state = "
 			<< GetStateName() << ")" << std::endl;
 	}
 	else if (receivedMessage.command == CmdStop)
 	{
 		if (state == StateHeating || state == StateCooling)
-			CombinedLogger::GetLogger() << "Received STOP command" << std::endl;
+			*logger << "Received STOP command" << std::endl;
 		else
-			CombinedLogger::GetLogger()
+			*logger
 			<< "Received STOP command, but system is not in an active state (state = "
 			<< GetStateName() << ")" << std::endl;
 	}
 	else if (receivedMessage.command == CmdReset)
 	{
 		if (state == StateCooling || state == StateError)
-			CombinedLogger::GetLogger() << "Received RESET command" << std::endl;
+			*logger << "Received RESET command" << std::endl;
 		else
-			CombinedLogger::GetLogger()
+			*logger
 			<< "Received RESET command, but system is not in resettable state (state = "
 			<< GetStateName() << ")" << std::endl;
 	}
 	else if (receivedMessage.command == CmdAutoTune)
 	{
 		if (state == StateReady)
-			CombinedLogger::GetLogger() << "Received AUTOTUNE command" << std::endl;
+			*logger << "Received AUTOTUNE command" << std::endl;
 		else
-			CombinedLogger::GetLogger()
+			*logger
 			<< "Received AUTOTUNE command, but system is not in ready state (state = "
 			<< GetStateName() << ")" << std::endl;
 	}
 	else
 	{
-		CombinedLogger::GetLogger() << "Received unknown command from front end:  "
+		*logger << "Received unknown command from front end:  "
 			<< receivedMessage.command << std::endl;
 		return;
 	}
@@ -1171,7 +1205,7 @@ bool SousVide::CleanUpAutoTuneLog(std::vector<double> &time,
 	std::ifstream file(autoTuneLogName.c_str(), std::ios::in);
 	if (!file.is_open() || !file.good())
 	{
-		CombinedLogger::GetLogger() << "Failed to open '"
+		*logger << "Failed to open '"
 			<< autoTuneLogName << "' for input" << std::endl;
 		return false;
 	}
@@ -1198,7 +1232,7 @@ bool SousVide::CleanUpAutoTuneLog(std::vector<double> &time,
 
 	std::string newName(GetLogFileName("auto-tune"));
 	if (rename(autoTuneLogName.c_str(), newName.c_str()) != 0)
-		CombinedLogger::GetLogger() << "Failed to move auto-tune log from '"
+		*logger << "Failed to move auto-tune log from '"
 		<< autoTuneLogName << "' to '" << newName << "'" << std::endl;
 
 	return true;
@@ -1229,7 +1263,7 @@ void SousVide::ResetPlot(void)
 		delete plotter;
 	}
 
-	plotter = new GNUPlotter(CombinedLogger::GetLogger());
+	plotter = new GNUPlotter(*logger);
 	if (!plotter->PipeIsOpen())
 		return;
 
@@ -1238,7 +1272,7 @@ void SousVide::ResetPlot(void)
 
 	plotStartTime = time(NULL);
 
-	std::string cleanPath(configuration.system.temperaturePlotPath);
+	std::string cleanPath(configuration->system.temperaturePlotPath);
 	if (*(cleanPath.end() - 1) != '/')
 		cleanPath.append("/");
 

@@ -16,3 +16,9 @@ nbproject/private/
 .src/
 *.log
 *.csv
+
+# Ignore CodeLite stuff
+*.workspace*
+*.tags
+*.project
+.clang

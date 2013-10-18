@@ -17,15 +17,10 @@ private:
 	class LoggerStreamBuffer : public std::stringbuf
 	{
 	public:
-		LoggerStreamBuffer(std::ostream &str) : output(str) {}
+		LoggerStreamBuffer(std::ostream &str) : output(str) {};
+		~LoggerStreamBuffer() {};
 
-		virtual int sync(void)
-		{
-			output << GetTimeStamp() << " : " << str();
-			str("");
-			output.flush();
-			return 0;
-		};
+		virtual int sync(void);
 
 	private:
 		std::ostream& output;
