@@ -199,7 +199,6 @@ bool SousVide::Initialize(void)
 
 	loopTimer = new TimingUtility(1.0 / configuration->system.idleFrequency, *logger);
 
-
 	std::string sensorID(configuration->io.sensorID);
 	if (sensorID.empty())
 	{
@@ -291,8 +290,11 @@ void SousVide::Run()
 
 	while (true)
 	{
+		// The call to TimeLoop must be the first thing in the loop!
 		if (!loopTimer->TimeLoop())
 			*logger << "Warning:  Main loop timing failed" << std::endl;
+
+		errorMessage.clear();
 
 		// Do the core work for the application
 		if (ni->ReceiveData(receivedMessage))
@@ -389,6 +391,7 @@ bool SousVide::TemperatureTrackingToleranceExceeded(void) const
 			<< "INTERLOCK:  Temperature tolerance exceeded (cmd = "
 			<< cmdTemperature << " deg F, act = "
 			<< actualTemperature << " deg F)" << std::endl;
+		AppendToErrorMessage("INTERLOCK:  Temperature tolerance exceeded");
 		return true;
 	}
 
@@ -428,8 +431,8 @@ bool SousVide::SaturationTimeExceeded(void)
 	time_t now(time(NULL));
 	if (difftime(now, saturationStartTime) > configuration->system.interlock.maxSaturationTime)
 	{
-		*logger
-			<< "PWM output max. saturation time exceeded" << std::endl;
+		*logger << "INTERLOCK:  PWM output saturation time exceeded" << std::endl;
+		AppendToErrorMessage("INTERLOCK:  PWM output saturation time exceeded");
 		return true;
 	}
 
@@ -459,9 +462,9 @@ bool SousVide::MaximumTemperatureExceeded(void) const
 
 	if (actualTemperature > configuration->system.interlock.maxTemperature)
 	{
-		*logger
-			<< "INTERLOCK:  Temperature limit exceeded (act = "
+		*logger << "INTERLOCK:  Temperature limit exceeded (act = "
 			<< actualTemperature << " deg F)" << std::endl;
+		AppendToErrorMessage("INTERLOCK:  Temperature limit exceeded");
 		return true;
 	}
 
@@ -490,6 +493,7 @@ bool SousVide::TemperatureSensorFailed(void) const
 	if (!controller->TemperatureSensorOK())
 	{
 		*logger << "INTERLOCK:  Bad result from temperature sensor" << std::endl;
+		AppendToErrorMessage("INTERLOCK:  Bad result from temperature sensor");
 		return true;
 	}
 
@@ -592,8 +596,9 @@ void SousVide::EnterState(void)
 		}
 		else
 		{
-			*logger << "Failed to re-load configuration" << std::endl;
-			// TODO:  Reply to clients to let them know about some invalid value?
+			AppendToErrorMessage(configuration->GetErrorMessage());
+			AppendToErrorMessage("ERROR:  Failed to re-load configuration");
+			*logger << "ERROR:  Failed to re-load configuration" << std::endl;
 			nextState = StateError;
 		}
 
@@ -621,7 +626,6 @@ void SousVide::EnterState(void)
 	}
 	else if (state == StateError)
 	{
-		// TODO:  alert user?
 	}
 	else if (state == StateAutoTune)
 	{
@@ -848,9 +852,9 @@ void SousVide::ExitState(void)
 			if (!tuner.GetSimulatedOpenLoopResponse(time, control, simTemp, temp[0]))
 				*logger << "Simulation failed" << std::endl;
 
-			// This is probably only necessary for verification of operation/debuggin and should
-			// be removed after we're sure everything is OK
-			// TODO:  Remove this bit here
+			// Write the simulated response to file.  This is helpful for validating that
+			// the auto-tune results are accurate - the simulated response should be similar
+			// to the actual response.
 			std::ofstream file("autoTuneSimulation.log", std::ios::out);
 			if (!file.is_open() || !file.good())
 			{
@@ -865,7 +869,7 @@ void SousVide::ExitState(void)
 			for (i = 0; i < time.size(); i++)
 				file << time[i] << "," << temp[i] << "," << simTemp[i] << std::endl;
 
-			file.close();//*/
+			file.close();
 		}
 		else
 			*logger << "Auto-tune failed" << std::endl;
@@ -1050,10 +1054,37 @@ BackToFrontMessage SousVide::AssembleMessage(void) const
 {
 	BackToFrontMessage message;
 	message.state = GetStateName();
+	message.errorMessage = errorMessage;
 	message.commandedTemperature = controller->GetCommandedTemperature();
 	message.actualTemperature = controller->GetActualTemperature();
 
 	return message;
+}
+
+//==========================================================================
+// Class:			SousVide
+// Function:		AppendToErrorMessage
+//
+// Description:		Appends the specified text to the error message and sets
+//					the "do we send a message to the client this frame" variable
+//					to true.
+//
+// Input Arguments:
+//		message	= std::string
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void SousVide::AppendToErrorMessage(std::string message)
+{
+	sendClientMessage = true;
+	if (!errorMessage.empty())
+		errorMessage.append("\n");
+	errorMessage.append(message);
 }
 
 //==========================================================================

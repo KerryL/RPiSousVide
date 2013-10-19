@@ -21,6 +21,7 @@ struct JSONKeys
 	static const std::string SoakTimeKey;
 
 	static const std::string StateKey;
+	static const std::string ErrorMessageKey;
 	static const std::string CommandedTemperatureKey;
 	static const std::string ActualTemperatureKey;
 };
@@ -38,6 +39,7 @@ struct FrontToBackMessage
 struct BackToFrontMessage
 {
 	std::string state;
+	std::string errorMessage;
 
 	double commandedTemperature;// [deg F]
 	double actualTemperature;// [deg F]

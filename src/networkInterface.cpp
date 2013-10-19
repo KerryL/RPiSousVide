@@ -216,6 +216,7 @@ bool NetworkInterface::EncodeMessage(const BackToFrontMessage &message,
 {
 	cJSON *root = cJSON_CreateObject();
 	cJSON_AddStringToObject(root, JSONKeys::StateKey.c_str(), message.state.c_str());
+	cJSON_AddStringToObject(root, JSONKeys::ErrorMessageKey.c_str(), message.errorMessage.c_str());
 	cJSON_AddNumberToObject(root, JSONKeys::CommandedTemperatureKey.c_str(), message.commandedTemperature);
 	cJSON_AddNumberToObject(root, JSONKeys::ActualTemperatureKey.c_str(), message.actualTemperature);
 	// TODO:  Tell front end when to enable/disable buttons?

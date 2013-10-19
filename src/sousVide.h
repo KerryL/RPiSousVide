@@ -79,6 +79,8 @@ private:
 	NetworkInterface *ni;
 	void ProcessMessage(const FrontToBackMessage &recievedMessage);
 	BackToFrontMessage AssembleMessage(void) const;
+	void AppendToErrorMessage(std::string message);
+	std::string errorMessage;
 	bool sendClientMessage;
 
 	TemperatureController *controller;

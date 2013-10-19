@@ -70,6 +70,8 @@ public:
 		: ConfigFile(outStream) {};
 	virtual ~SousVideConfig() {};
 
+	std::string GetErrorMessage(void) const { return errorMessage; };
+
 	// Configuration options to be read from file
 	NetworkConfiguration network;
 	IOConfiguration io;
@@ -80,12 +82,15 @@ private:
 	virtual void BuildConfigItems(void);
 	virtual void AssignDefaults(void);
 
-	virtual bool ConfigIsOK(void) const;
-	bool NetworkConfigIsOK(void) const;
-	bool IOConfigIsOK(void) const;
-	bool ControllerConfigIsOK(void) const;
-	bool InterlockConfigIsOK(void) const;
-	bool SystemConfigIsOK(void) const;
+	virtual bool ConfigIsOK(void);
+	bool NetworkConfigIsOK(void);
+	bool IOConfigIsOK(void);
+	bool ControllerConfigIsOK(void);
+	bool InterlockConfigIsOK(void);
+	bool SystemConfigIsOK(void);
+
+	std::string errorMessage;
+	void AppendToErrorMessage(std::string message);
 };
 
 #endif// SOUS_VIDE_CONFIG_H_

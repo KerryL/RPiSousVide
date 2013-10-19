@@ -15,6 +15,10 @@
 #include "autoTuner.h"
 #include "matrix.h"
 
+#ifdef WIN32
+#define isinf(x) x - x == 0.0 ? false : true
+#endif
+
 //==========================================================================
 // Class:			AutoTuner
 // Function:		AutoTuner
@@ -186,7 +190,13 @@ bool AutoTuner::ComputeC1(const std::vector<double> &time, const std::vector<dou
 		}
 	}
 
-	c1 = -A.LeftDivide(b)(0,0);
+	Matrix x;
+	if (!A.LeftDivide(b, x))
+	{
+		outStream << "Error while solving matrix equation for c1" << std::endl;
+		return false;
+	}
+	c1 = -x(0,0);
 
 	return true;
 }
@@ -230,7 +240,13 @@ bool AutoTuner::ComputeC2(const std::vector<double> &time, const std::vector<dou
 		b(i, 0) = dTdt[i];
 	}
 
-	c2 = A.LeftDivide(b)(0, 0);
+	Matrix x;
+	if (!A.LeftDivide(b, x))
+	{
+		outStream << "Error while solving matrix equation for c2" << std::endl;
+		return false;
+	}
+	c2 = x(0,0);
 
 	return true;
 }
@@ -531,7 +547,7 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 	temperature.clear();
 
 	// Create the first data point
-	// We don't just push the initial temeprature, in case the time series we're
+	// We don't blindly push the initial temeprature, in case the time series we're
 	// using doesn't start at zero
 	temperature.push_back(GetSimulatedOpenLoopResponse(time[0], control[0],
 		initialTemperature, ambientTemperature));
@@ -574,33 +590,7 @@ double AutoTuner::GetSimulatedOpenLoopResponse(double deltaT, double control,
 	//        In using AB3 and RK4, though, the results are very similar (possibly
 	//        due to relativly high system inertia and constant control input?).
 
-	// TODO:  This could be cleaned up, maybe provide an integrator option?
-	// Any integrator with options should probably be it's own class...
-	/*double nextTemperature;
-	const unsigned int integrator(0);
-	if (integrator == 0)// Forward Euler
-		nextTemperature =*/return tankTemperature + deltaT * PredictRateOfChange(control, tankTemperature, ambientTemperature);
-	/*else if (integrator == 1)// Adams-Bashforth 3rd order
-	{
-		double rate = PredictRateOfChange(control, tankTemperature, ambientTemperature);
-		nextTemperature = tankTemperature + deltaT * (23.0 / 12.0 * rate - 4.0 / 3.0 * lastRate + 5.0 / 12.0 * lastLastRate);
-		lastLastRate = lastRate;
-		lastRate = rate;
-	}
-	else if (integrator == 2)// Runge-Kutta 4th order
-	{
-		// TODO:  Really, control should be interpolated, too (not an issues as we're currently using it, since control is constant...)
-		double k1, k2, k3, k4;
-		k1 = PredictRateOfChange(control, tankTemperature, ambientTemperature);
-		k2 = PredictRateOfChange(control, tankTemperature + deltaT * 0.5 * k1, ambientTemperature);
-		k3 = PredictRateOfChange(control, tankTemperature + deltaT * 0.5 * k2, ambientTemperature);
-		k4 = PredictRateOfChange(control, tankTemperature + deltaT * k3, ambientTemperature);
-		nextTemperature = tankTemperature + 1.0 / 6.0 * deltaT * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
-	}
-	else
-		assert(false);
-
-	return nextTemperature;*/
+	return tankTemperature + deltaT * PredictRateOfChange(control, tankTemperature, ambientTemperature);
 }
 
 //==========================================================================

@@ -38,7 +38,7 @@ protected:
 	virtual void BuildConfigItems(void) = 0;
 	virtual void AssignDefaults(void) = 0;
 
-	virtual bool ConfigIsOK(void) const = 0;
+	virtual bool ConfigIsOK(void) = 0;
 
 	class ConfigItem
 	{

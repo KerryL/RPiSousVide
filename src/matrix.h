@@ -67,11 +67,11 @@ public:
 	bool GetSingularValueDecomposition(Matrix &U, Matrix &V, Matrix &W) const;
 
 	Matrix GetTranspose(void) const;
-	Matrix GetInverse(void) const;
-	Matrix GetPsuedoInverse(void) const;
+	bool GetInverse(Matrix &inverse) const;
+	bool GetPsuedoInverse(Matrix &inverse) const;
 	Matrix GetDiagonalInverse(void) const;
 
-	Matrix LeftDivide(const Matrix& b) const;// x = A \ b
+	bool LeftDivide(const Matrix& b, Matrix &x) const;// x = A \ b
 	Matrix GetRowReduced(void) const;
 	unsigned int GetRank(void) const;
 

@@ -401,13 +401,13 @@ Matrix Matrix::GetTranspose(void) const
 //		b	= const Matrix& vector to divide this into
 //
 // Output Arguments:
-//		None
+//		x	= Matrix&
 //
 // Return Value:
-//		Matrix result of the division (x in the above example)
+//		bool, true for success, false otherwise
 //
 //==========================================================================
-Matrix Matrix::LeftDivide(const Matrix &b) const
+bool Matrix::LeftDivide(const Matrix &b, Matrix &x) const
 {
 	// Normal equations solution (not very robust?)
 	//return GetInverse() * b;
@@ -418,12 +418,10 @@ Matrix Matrix::LeftDivide(const Matrix &b) const
 	Matrix W;
 
 	if (!GetSingularValueDecomposition(U, V, W))
-	{
-		// TODO:  Generate an error?
-		return *this;
-	}
+		return false;
 
-	return V * W.GetDiagonalInverse().GetTranspose() * U.GetTranspose() * b;
+	x = V * W.GetDiagonalInverse().GetTranspose() * U.GetTranspose() * b;
+	return true;
 }
 
 //==========================================================================
@@ -935,19 +933,19 @@ const double &Matrix::operator () (const unsigned int &row, const unsigned int &
 //		None
 //
 // Output Arguments:
-//		None
+//		inverse	= Matrix&
 //
 // Return Value:
-//		Matrix, inverse of this
+//		bool, true for success, false otherwise
 //
 //==========================================================================
-Matrix Matrix::GetInverse(void) const
+bool Matrix::GetInverse(Matrix &inverse) const
 {
 	if (!IsSquare() || GetRank() != rows)
-		return GetPsuedoInverse();
+		return GetPsuedoInverse(inverse);
 
-	// NOTE:  I'm not sure there is a point to having two inverse methods?
-	return GetPsuedoInverse();
+	// Don't see a point to having two inverse methods -> always use the same method
+	return GetPsuedoInverse(inverse);
 }
 
 //==========================================================================
@@ -960,13 +958,13 @@ Matrix Matrix::GetInverse(void) const
 //		None
 //
 // Output Arguments:
-//		None
+//		inverse	= Matrix&, inverse of this
 //
 // Return Value:
-//		Matrix, inverse of this
+//		bool, true for success, false otherwise
 //
 //==========================================================================
-Matrix Matrix::GetPsuedoInverse(void) const
+bool Matrix::GetPsuedoInverse(Matrix &inverse) const
 {
 	// Use singular value decomposition to compute the inverse
 	// SVD algorithm interpreted from Numerical Recipies in C
@@ -975,12 +973,10 @@ Matrix Matrix::GetPsuedoInverse(void) const
 	Matrix V;
 
 	if (!GetSingularValueDecomposition(U, V, W))
-	{
-		// TODO:  Generate an error?
-		return *this;
-	}
+		return false;
 
-	return V * W.GetDiagonalInverse() * U.GetTranspose();
+	inverse = V * W.GetDiagonalInverse() * U.GetTranspose();
+	return true;
 }
 
 //==========================================================================
@@ -1067,7 +1063,6 @@ double Matrix::Pythag(const double& a, const double &b) const
 //==========================================================================
 unsigned int Matrix::GetRank(void) const
 {
-	// TODO:  Is it better to use SVD for this?  Rank = # of non-zero singular values
 	Matrix reduced = GetRowReduced();
 
 	unsigned int rank(0), curRow, curCol;

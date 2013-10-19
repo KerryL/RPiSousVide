@@ -121,13 +121,17 @@ void SousVideConfig::AssignDefaults(void)
 //		bool, true for OK, false otherwise
 //
 //==========================================================================
-bool SousVideConfig::ConfigIsOK(void) const
+bool SousVideConfig::ConfigIsOK(void)
 {
+	errorMessage.clear();
+
 	bool configOK = NetworkConfigIsOK();
 	configOK = IOConfigIsOK() && configOK;
 	configOK = ControllerConfigIsOK() && configOK;
 	configOK = InterlockConfigIsOK() && configOK;
 	configOK = SystemConfigIsOK() && configOK;
+
+	outStream << errorMessage << std::endl;
 
 	return configOK;
 }
@@ -148,14 +152,15 @@ bool SousVideConfig::ConfigIsOK(void) const
 //		bool, true for OK, false otherwise
 //
 //==========================================================================
-bool SousVideConfig::NetworkConfigIsOK(void) const
+bool SousVideConfig::NetworkConfigIsOK(void)
 {
 	bool ok(true);
 
 	// Don't allow ports that will require root access
 	if (network.port < 1024)
 	{
-		outStream << "Network:  " << GetKey(network.port) << " must be 1024 or greater" << std::endl;
+		AppendToErrorMessage("Network:  "
+			+ GetKey(network.port) + " must be 1024 or greater");
 		ok = false;
 	}
 
@@ -178,36 +183,36 @@ bool SousVideConfig::NetworkConfigIsOK(void) const
 //		bool, true for OK, false otherwise
 //
 //==========================================================================
-bool SousVideConfig::IOConfigIsOK(void) const
+bool SousVideConfig::IOConfigIsOK(void)
 {
 	bool ok(true);
 
 	if (io.pumpRelayPin < 0)
 	{
-		outStream << "IO:  " << GetKey(io.pumpRelayPin) << " must be positive" << std::endl;
+		AppendToErrorMessage("IO:  " + GetKey(io.pumpRelayPin) + " must be positive");
 		ok = false;
 	}
 	else if (io.pumpRelayPin > 20)
 	{
-		outStream << "IO:  " << GetKey(io.pumpRelayPin) << " must be less than or equal to 20" << std::endl;
+		AppendToErrorMessage("IO:  " + GetKey(io.pumpRelayPin) + " must be less than or equal to 20");
 		ok = false;
 	}
 
 	if (io.heaterRelayPin < 0)
 	{
-		outStream << "IO:  " << GetKey(io.heaterRelayPin) << " must be positive" << std::endl;
+		AppendToErrorMessage("IO:  " + GetKey(io.heaterRelayPin) + " must be positive");
 		ok = false;
 	}
 	else if (io.heaterRelayPin > 20)
 	{
-		outStream << "IO:  " << GetKey(io.heaterRelayPin) << " must be less than or equal to 20" << std::endl;
+		AppendToErrorMessage("IO:  " + GetKey(io.heaterRelayPin) + " must be less than or equal to 20");
 		ok = false;
 	}
 
 	if (io.heaterRelayPin == io.pumpRelayPin)
 	{
-		outStream << "IO:  " << GetKey(io.heaterRelayPin) << " and "
-			<< GetKey(io.pumpRelayPin) << " must be unique" << std::endl;
+		AppendToErrorMessage("IO:  " + GetKey(io.heaterRelayPin) + " and "
+			+ GetKey(io.pumpRelayPin) + " must be unique");
 		ok = false;
 	}
 
@@ -230,50 +235,50 @@ bool SousVideConfig::IOConfigIsOK(void) const
 //		bool, true for OK, false otherwise
 //
 //==========================================================================
-bool SousVideConfig::ControllerConfigIsOK(void) const
+bool SousVideConfig::ControllerConfigIsOK(void)
 {
 	bool ok(true);
 
 	if (controller.kp < 0.0)
 	{
-		outStream << "Controller:  " << GetKey(controller.kp) << " must be positive ("
-			<< GetKey(controller.kp) << " must be specified)" << std::endl;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.kp) + " must be positive");
 		ok = false;
 	}
 
 	if (controller.ti < 0.0)
 	{
-		outStream << "Controller:  " << GetKey(controller.ti) << " must be positive" << std::endl;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.ti) + " must be positive");
 		ok = false;
 	}
 
 	if (controller.kd < 0.0)
 	{
-		outStream << "Controller:  " << GetKey(controller.kd) << " must be positive" << std::endl;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.kd) + " must be positive");
 		ok = false;
 	}
 
 	if (controller.kf < 0.0)
 	{
-		outStream << "Controller:  " << GetKey(controller.kf) << " must be positive" << std::endl;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.kf) + " must be positive");
 		ok = false;
 	}
 
 	if (controller.td <= 0.0)
 	{
-		outStream << "Controller:  " << GetKey(controller.td) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.td) + " must be strictly positive");
 		ok = false;
 	}
 
 	if (controller.tf <= 0.0)
 	{
-		outStream << "Controller:  " << GetKey(controller.tf) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.tf) + " must be strictly positive");
 		ok = false;
 	}
 
 	if (controller.plateauTolerance <= 0.0)
 	{
-		outStream << "Controller:  " << GetKey(controller.plateauTolerance) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.plateauTolerance)
+			+ " must be strictly positive");
 		ok = false;
 	}
 
@@ -283,12 +288,18 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 	const double pwmMaxFrequency(96000.0);// [Hz]
 	if (controller.pwmFrequency < pwmMinFrequency)
 	{
-		outStream << "Controller:  " << GetKey(controller.pwmFrequency) << " must be greater than " << pwmMinFrequency << " Hz" << std::endl;
+		std::stringstream ss;
+		ss << pwmMinFrequency;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.pwmFrequency)
+			+ " must be greater than " + ss.str() + " Hz");
 		ok = false;
 	}
 	else if (controller.pwmFrequency > pwmMaxFrequency)
 	{
-		outStream << "Controller:  " << GetKey(controller.pwmFrequency) << " must be less than " << pwmMaxFrequency << " Hz" << std::endl;
+		std::stringstream ss;
+		ss << pwmMaxFrequency;
+		AppendToErrorMessage("Controller:  " + GetKey(controller.pwmFrequency)
+			+ " must be greater than " + ss.str() + " Hz");
 		ok = false;
 	}
 
@@ -311,41 +322,47 @@ bool SousVideConfig::ControllerConfigIsOK(void) const
 //		bool, true for OK, false otherwise
 //
 //==========================================================================
-bool SousVideConfig::InterlockConfigIsOK(void) const
+bool SousVideConfig::InterlockConfigIsOK(void)
 {
 	bool ok(true);
 
 	if (system.interlock.maxSaturationTime <= 0.0)
 	{
-		outStream << "Interlock:  " << GetKey(system.interlock.maxSaturationTime) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("Interlock:  " + GetKey(system.interlock.maxSaturationTime)
+			+ " must be strictly positive");
 		ok = false;
 	}
 
 	if (system.interlock.maxTemperature < 100.0)
 	{
-		outStream << "Interlock:  " << GetKey(system.interlock.maxTemperature) << " must be greater than 100.0 deg F" << std::endl;
+		AppendToErrorMessage("Interlock:  " + GetKey(system.interlock.maxTemperature)
+			+ " must be greater than 100 deg F");
 		ok = false;
 	}
 	else if  (system.interlock.maxTemperature > 212.0)
 	{
-		outStream << "Interlock:  " << GetKey(system.interlock.maxTemperature) << " must be less than 212.0 deg F" << std::endl;
+		AppendToErrorMessage("Interlock:  " + GetKey(system.interlock.maxTemperature)
+			+ " must be less than 212 deg F");
 		ok = false;
 	}
 
 	if (system.interlock.temperatureTolerance <= 0.0)
 	{
-		outStream << "Interlock:  " << GetKey(system.interlock.temperatureTolerance) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("Interlock:  " + GetKey(system.interlock.temperatureTolerance)
+			+ " must be strictly positive");
 		ok = false;
 	}
 	else if (system.interlock.temperatureTolerance > 30.0)
 	{
-		outStream << "Interlock:  " << GetKey(system.interlock.temperatureTolerance) << " must be less than 30 deg F" << std::endl;
+		AppendToErrorMessage("Interlock:  " + GetKey(system.interlock.temperatureTolerance)
+			+ " must be less than 30 deg F");
 		ok = false;
 	}
 
 	if (system.interlock.minErrorTime < 0.0)
 	{
-		outStream << "Interlock:  " << GetKey(system.interlock.minErrorTime) << " must be positive" << std::endl;
+		AppendToErrorMessage("Interlock:  " + GetKey(system.interlock.minErrorTime)
+			+ " must be positive");
 		ok = false;
 	}
 
@@ -368,54 +385,77 @@ bool SousVideConfig::InterlockConfigIsOK(void) const
 //		bool, true for OK, false otherwise
 //
 //==========================================================================
-bool SousVideConfig::SystemConfigIsOK(void) const
+bool SousVideConfig::SystemConfigIsOK(void)
 {
 	bool ok(true);
 
 	if (system.idleFrequency <= 0.0)
 	{
-		outStream << "System:  " << GetKey(system.idleFrequency) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("System:  " + GetKey(system.idleFrequency) + " must be strictly positive");
 		ok = false;
 	}
 
 	if (system.activeFrequency <= 0.0)
 	{
-		outStream << "System:  " << GetKey(system.activeFrequency) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("System:  " + GetKey(system.activeFrequency) + " must be strictly positive");
 		ok = false;
 	}
 
 	if (system.maxHeatingRate <= 0.0)
 	{
-		outStream << "System:  " << GetKey(system.maxHeatingRate) << " must be strictly positive ("
-			<< GetKey(system.maxHeatingRate) << " must be specified)" << std::endl;
+		AppendToErrorMessage("System:  " + GetKey(system.maxHeatingRate) + " must be strictly positive ("
+			+ GetKey(system.maxHeatingRate) + " must be specified)");
 		ok = false;
 	}
 
 	if (system.maxAutoTuneTime <= 0.0)
 	{
-		outStream << "System:  " << GetKey(system.maxAutoTuneTime) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("System:  " + GetKey(system.maxAutoTuneTime) + " must be strictly positive");
 		ok = false;
 	}
 
 	if (system.maxAutoTuneTemperatureRise <= 0.0)
 	{
-		outStream << "System:  " << GetKey(system.maxAutoTuneTemperatureRise) << " must be strictly positive" << std::endl;
+		AppendToErrorMessage("System:  " + GetKey(system.maxAutoTuneTemperatureRise) + " must be strictly positive");
 		ok = false;
 	}
 
 	struct stat info;
 	if (stat(system.temperaturePlotPath.c_str(), &info) != 0)
 	{
-		outStream << "System:  " << "Path indicated by " << GetKey(system.temperaturePlotPath) << " does not exist" << std::endl;
+		AppendToErrorMessage("System:  Path indicated by " + GetKey(system.temperaturePlotPath) + " does not exist");
 		ok = false;
 	}
 #ifndef WIN32
 	else if (!S_ISDIR(info.st_mode))
 	{
-		outStream << "System:  " << "Path indicated by " << GetKey(system.temperaturePlotPath) << " is not a directory" << std::endl;
+		AppendToErrorMessage("System:  Path indicated by " + GetKey(system.temperaturePlotPath) + " is not a directory");
 		ok = false;
 	}
 #endif
 
 	return ok;
+}
+
+//==========================================================================
+// Class:			SousVideConfig
+// Function:		AppendToErrorMessage
+//
+// Description:		Appends the specified message to the error string.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		bool, true for OK, false otherwise
+//
+//==========================================================================
+void SousVideConfig::AppendToErrorMessage(std::string message)
+{
+	if (!errorMessage.empty())
+		errorMessage.append("\n");
+	errorMessage.append(message);
 }

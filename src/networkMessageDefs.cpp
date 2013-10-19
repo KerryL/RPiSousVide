@@ -31,5 +31,6 @@ const std::string JSONKeys::CommandKey				= "Command";
 const std::string JSONKeys::PlateauTemperatureKey	= "SetTemp";
 const std::string JSONKeys::SoakTimeKey				= "SoakTime";
 const std::string JSONKeys::StateKey				= "State";
+const std::string JSONKeys::ErrorMessageKey			= "ErrMesg";
 const std::string JSONKeys::CommandedTemperatureKey	= "CmdTemp";
 const std::string JSONKeys::ActualTemperatureKey	= "ActTemp";
