@@ -20,7 +20,7 @@ CPPOBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
 #OBJS = $(CPPOBJS:.c=.o)
 OBJS = $(CPPOBJS:.c=__C.o)
 
-.PHONY: all clean
+.PHONY: all clean copy
 
 all: $(TARGET)
 

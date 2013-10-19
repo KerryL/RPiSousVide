@@ -7,8 +7,8 @@
 # DO NOT include the -I prefix to these paths - it will
 # be added automatically
 INCDIRS_TEMP = \
-	$(PWD)/../src/ \
-	/usr/local/include
+	/usr/local/include \
+	$(CURDIR)/../../../src/
 
 INCDIRS = $(addprefix -I,$(INCDIRS_TEMP))
 

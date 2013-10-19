@@ -18,7 +18,7 @@ SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
 
-.PHONY: all clean
+.PHONY: all clean copy
 
 all: $(TARGET)
 
