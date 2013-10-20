@@ -380,7 +380,7 @@ bool SousVide::InterlocksOK(void)
 //		bool, true if the interlock has been tripped, false otherwise
 //
 //==========================================================================
-bool SousVide::TemperatureTrackingToleranceExceeded(void) const
+bool SousVide::TemperatureTrackingToleranceExceeded(void)
 {
 	double actualTemperature(controller->GetActualTemperature());
 	double cmdTemperature(controller->GetCommandedTemperature());
@@ -456,7 +456,7 @@ bool SousVide::SaturationTimeExceeded(void)
 //		bool, true if the interlock has been tripped, false otherwise
 //
 //==========================================================================
-bool SousVide::MaximumTemperatureExceeded(void) const
+bool SousVide::MaximumTemperatureExceeded(void)
 {
 	double actualTemperature(controller->GetActualTemperature());
 
@@ -488,7 +488,7 @@ bool SousVide::MaximumTemperatureExceeded(void) const
 //		bool, true if the interlock has been tripped, false otherwise
 //
 //==========================================================================
-bool SousVide::TemperatureSensorFailed(void) const
+bool SousVide::TemperatureSensorFailed(void)
 {
 	if (!controller->TemperatureSensorOK())
 	{

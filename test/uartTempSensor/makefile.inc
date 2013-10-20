@@ -50,13 +50,13 @@ CFLAGS = -g -Wall -Wextra -Werror -pedantic -std=c++0x $(INCDIRS)
 LDFLAGS = $(LIBDIRS) $(LIBS)
 
 # Object file output directory
-OBJDIR = $(PWD)/.obj/
+OBJDIR = $(CURDIR)/.obj/
 
 # Binary file output directory
-BINDIR = $(PWD)/bin/
+BINDIR = $(CURDIR)/../bin/
 
 # Library output directory
-LIBOUTDIR = $(PWD)/.lib/
+LIBOUTDIR = $(CURDIR)/.lib/
 
 # Method for creating directories
 MKDIR = mkdir -p

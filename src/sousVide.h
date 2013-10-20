@@ -109,9 +109,9 @@ private:
 
 	bool InterlocksOK(void);
 	bool SaturationTimeExceeded(void);
-	bool TemperatureTrackingToleranceExceeded(void) const;
-	bool MaximumTemperatureExceeded(void) const;
-	bool TemperatureSensorFailed(void) const;
+	bool TemperatureTrackingToleranceExceeded(void);
+	bool MaximumTemperatureExceeded(void);
+	bool TemperatureSensorFailed(void);
 	time_t saturationStartTime;
 	bool lastOutputSaturated;
 
