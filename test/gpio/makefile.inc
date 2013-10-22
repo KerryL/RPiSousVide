@@ -25,7 +25,8 @@ LIBDIRS = $(addprefix -L,$(LIBDIRS_TEMP))
 # will be added automatically
 LIBS_TEMP = \
 	pthread \
-	wiringPi
+	wiringPi \
+	rt
 
 LIBS = $(addprefix -l,$(LIBS_TEMP))
 

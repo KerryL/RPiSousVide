@@ -58,7 +58,10 @@ PWMOutput::PWMOutput(int pin, PWMMode mode) : GPIO(pin, DirectionPWMOutput)
 	SetMode(mode);
 
 	range = 1024;
-	frequency = pwmClockFrequency / range / minClockDivisor;// TODO:  Verify default clock divisor is 2
+	
+	// Set the frequency using the member method just in case something
+	// outside of the class manipulated it before-hand.
+	SetFrequency(pwmClockFrequency / range / minClockDivisor);
 }
 
 //==========================================================================
