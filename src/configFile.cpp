@@ -255,6 +255,6 @@ void ConfigFile::ConfigItem::AssignValue(const std::string &dataString)
 //==========================================================================
 void ConfigFile::StripCarriageReturn(std::string &s) const
 {
-	if (*s.rbegin() == '\r')
+	if (!s.empty() && *s.rbegin() == '\r')
 		s.erase(s.length() - 1);
 }
