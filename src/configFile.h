@@ -16,6 +16,7 @@
 #include <cstring>
 #include <cassert>
 #include <fstream>
+#include <vector>
 #include <errno.h>
 
 struct ConfigFile
@@ -56,7 +57,8 @@ protected:
 			TypeLong,
 			TypeFloat,
 			TypeDouble,
-			TypeString
+			TypeString,
+			TypeStringVector
 		};
 
 		ConfigItem(bool &b) : type(TypeBool) { data.b = &b; };
@@ -71,11 +73,14 @@ protected:
 		ConfigItem(float &f) : type(TypeFloat) { data.f = &f; };
 		ConfigItem(double &d) : type(TypeDouble) { data.d = &d; };
 		ConfigItem(std::string &st) : type(TypeString) { this->st = &st; };
+		ConfigItem(std::vector<std::string> &sv) : type(TypeStringVector) { this->sv = &sv; };
 
 		void AssignValue(const std::string &data);
 
 	private:
 		const Type type;
+
+		bool InterpretBooleanData(const std::string &dataString) const;
 
 		union
 		{
@@ -93,6 +98,7 @@ protected:
 		} data;
 
 		std::string* st;
+		std::vector<std::string>* sv;
 	};
 
 	template <typename T>
@@ -101,9 +107,9 @@ protected:
 private:
 	static const std::string commentCharacter;
 
+	void StripCarriageReturn(std::string &s) const;
 	void SplitFieldFromData(const std::string &line, std::string &field, std::string &data);
 	void ProcessConfigItem(const std::string &field, const std::string &data);
-	bool ReadBooleanValue(const std::string &dataString) const;
 
 	std::map<std::string, ConfigItem> configItems;
 	std::map<void* const, std::string> keyMap;

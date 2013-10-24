@@ -65,6 +65,7 @@ bool ConfigFile::ReadConfiguration(std::string fileName)
 
 	while (std::getline(file, line))
 	{
+		StripCarriageReturn(line);
 		if (line.empty() ||
 			commentCharacter.compare(line.substr(0,1)) == 0)
 			continue;
@@ -105,13 +106,20 @@ bool ConfigFile::ReadConfiguration(std::string fileName)
 void ConfigFile::SplitFieldFromData(const std::string &line,
 	std::string &field, std::string &data)
 {
-	// Break out the data into a Field and the data (data may
+	// Break out the line into a field and the data (data may
 	// contain spaces or equal sign!)
 	size_t spaceLoc = line.find_first_of(" ");
 	size_t equalLoc = line.find_first_of("=");
 	field = line.substr(0, std::min(spaceLoc, equalLoc));
 
-	if (spaceLoc == std::string::npos)
+	if (spaceLoc == std::string::npos &&
+		equalLoc == std::string::npos)
+	{
+		// Special case where no data portion was provided
+		data.clear();
+		return;
+	}
+	else if (spaceLoc == std::string::npos)
 		spaceLoc = equalLoc;
 	else if (equalLoc == std::string::npos)
 		equalLoc = spaceLoc;
@@ -155,8 +163,8 @@ void ConfigFile::ProcessConfigItem(const std::string &field, const std::string &
 }
 
 //==========================================================================
-// Class:			ConfigFile
-// Function:		ReadBooleanValue
+// Class:			ConfigItem
+// Function:		InterpretBooleanData
 //
 // Description:		Reads the specified data into boolean form.  Interprets true
 //					values when data is "1" or empty (boolean fields should be
@@ -170,12 +178,12 @@ void ConfigFile::ProcessConfigItem(const std::string &field, const std::string &
 //		None
 //
 // Return Value:
-//		bool, value of boolean configuration item
+//		bool
 //
 //==========================================================================
-bool ConfigFile::ReadBooleanValue(const std::string &data) const
+bool ConfigFile::ConfigItem::InterpretBooleanData(const std::string &data) const
 {
-	return atoi(data.c_str()) == 1 || data.empty();
+	return data.compare("1") == 0 || data.empty();
 }
 
 //==========================================================================
@@ -199,29 +207,54 @@ void ConfigFile::ConfigItem::AssignValue(const std::string &dataString)
 {
 	std::stringstream ss(dataString);
 	if (type == TypeBool)
-		ss >> *data.b;
+		*data.b = InterpretBooleanData(dataString);
 	else if (type == TypeUnsignedChar)
 		ss >> *data.uc;
-	else if (type ==TypeChar)
+	else if (type == TypeChar)
 		ss >> *data.c;
-	else if (type ==TypeUnsignedShort)
+	else if (type == TypeUnsignedShort)
 		ss >> *data.us;
-	else if (type ==TypeShort)
+	else if (type == TypeShort)
 		ss >> *data.s;
-	else if (type ==TypeUnsignedInt)
+	else if (type == TypeUnsignedInt)
 		ss >> *data.ui;
-	else if (type ==TypeInt)
+	else if (type == TypeInt)
 		ss >> *data.i;
-	else if (type ==TypeUnsignedLong)
+	else if (type == TypeUnsignedLong)
 		ss >> *data.ul;
-	else if (type ==TypeLong)
+	else if (type == TypeLong)
 		ss >> *data.l;
-	else if (type ==TypeFloat)
+	else if (type == TypeFloat)
 		ss >> *data.f;
-	else if (type ==TypeDouble)
+	else if (type == TypeDouble)
 		ss >> *data.d;
-	else if (type ==TypeString)
+	else if (type == TypeString)
 		ss >> *st;
+	else if (type == TypeStringVector)
+		sv->push_back(dataString);
 	else
 		assert(false);
+}
+
+//==========================================================================
+// Class:			ConfigItem
+// Function:		StripCarriageReturn
+//
+// Description:		Removes the '\r' from the end of the string, in case
+//					we're reading Windows-generated files on a Linux system.
+//
+// Input Arguments:
+//		s	= std::string&
+//
+// Output Arguments:
+//		s	= std::string&
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void ConfigFile::StripCarriageReturn(std::string &s) const
+{
+	if (*s.rbegin() == '\r')
+		s.erase(s.length() - 1);
 }
