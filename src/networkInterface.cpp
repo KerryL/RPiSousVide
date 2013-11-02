@@ -125,6 +125,9 @@ bool NetworkInterface::ReceiveData(FrontToBackMessage &message)
 //==========================================================================
 bool NetworkInterface::SendData(const BackToFrontMessage &message)
 {
+	if (socket->GetClientCount() == 0)
+		return true;
+		
 	std::string stringBuffer;
 	if (!EncodeMessage(message, stringBuffer))
 		return false;

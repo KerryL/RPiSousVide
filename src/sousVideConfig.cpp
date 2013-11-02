@@ -131,7 +131,8 @@ bool SousVideConfig::ConfigIsOK(void)
 	configOK = InterlockConfigIsOK() && configOK;
 	configOK = SystemConfigIsOK() && configOK;
 
-	outStream << errorMessage << std::endl;
+	if (!errorMessage.empty())
+		outStream << errorMessage << std::endl;
 
 	return configOK;
 }

@@ -217,6 +217,8 @@ bool SousVide::Initialize(void)
 
 		sensorID = sensorList[0];
 	}
+	
+	*logger << "Using temperature sensor '" << sensorID << "'" << std::endl;
 
 	sendClientMessage = false;
 
