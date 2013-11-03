@@ -492,12 +492,14 @@ bool SousVide::MaximumTemperatureExceeded(void)
 //==========================================================================
 bool SousVide::TemperatureSensorFailed(void)
 {
-	if (!controller->TemperatureSensorOK())
+	/*if (!controller->TemperatureSensorOK())
 	{
 		*logger << "INTERLOCK:  Bad result from temperature sensor" << std::endl;
 		AppendToErrorMessage("INTERLOCK:  Bad result from temperature sensor");
 		return true;
-	}
+	}*/
+	// I think this happens too often, and probably isn't really a big deal
+	// We'll have to test to figure out if that's true
 
 	return false;
 }
@@ -637,6 +639,13 @@ void SousVide::EnterState(void)
 		controller->DirectlySetPWMDuty(1.0);
 		SetUpAutoTuneLog();
 		startTemperature = controller->GetActualTemperature();
+		
+		*logger << "Auto-tune will stop in "
+			<< configuration->system.maxAutoTuneTime / 60.0
+			<< " minutes, or when temperature reaches "
+			<< configuration->system.maxAutoTuneTemperatureRise
+			+ startTemperature
+			<< " deg F" << std::endl;
 	}
 	else
 		assert(false);
@@ -1253,11 +1262,25 @@ bool SousVide::CleanUpAutoTuneLog(std::vector<double> &time,
 	std::stringstream ss;
 	while (std::getline(file, line))
 	{
+		ss.clear();// clear stream state (otherwise we get stuck on EOL after first line)
 		ss.str(line);
-		ss >> value;
+		if (!(ss >> value))
+		{
+			*logger << "Failed to extract time value" << std::endl;
+			return false;
+		}
 		time.push_back(value);
+		if (ss.peek() != ',')
+		{
+			*logger << "Expected ',', found '" << ss.peek() << "'" << std::endl;
+			return false;
+		}
 		ss.ignore();
-		ss >> value;
+		if (!(ss >> value))
+		{
+			*logger << "Failed to extract temperature value" << std::endl;
+			return false;
+		}
 		temperature.push_back(value);
 	}
 

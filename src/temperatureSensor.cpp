@@ -58,7 +58,7 @@ const std::string TemperatureSensor::deviceFile = "/w1_slave";
 //==========================================================================
 TemperatureSensor::TemperatureSensor(std::string deviceID,
 	std::ostream &outStream, std::string baseDirectory)
-	: device(baseDirectory + deviceID + deviceFile), outStream(outStream)
+	: deviceID(deviceID), device(baseDirectory + deviceID + deviceFile), outStream(outStream)
 {
 	if (!initialized)
 	{
@@ -75,7 +75,7 @@ TemperatureSensor::TemperatureSensor(std::string deviceID,
 // Description:		Reads current temperature from DS18B20 sensor.
 //
 // Input Arguments:
-//		None
+//		allowedRecursion	= unsigned int, number of attempts to make in the event of repeated errors
 //
 // Output Arguments:
 //		temperature	= double& [deg C]
@@ -84,46 +84,52 @@ TemperatureSensor::TemperatureSensor(std::string deviceID,
 //		bool, true for success, false otherwise
 //
 //==========================================================================
-bool TemperatureSensor::GetTemperature(double &temperature) const
+bool TemperatureSensor::GetTemperature(double &temperature, unsigned int allowedRecursions) const
 {
+	if (allowedRecursions == 0)
+		return false;
+		
 	std::ifstream file(device.c_str(), std::ios::in);
 	if (!file.is_open() || !file.good())
 	{
 		outStream << "Could not open file '" << device << "' for input" << std::endl;
-		return false;
+		return GetTemperature(temperature, allowedRecursions - 1);
 	}
 
 	std::string data;
 	if (!std::getline(file, data))
 	{
 		outStream << "Failed to read CRC from file '" << device << "'" << std::endl;
-		return false;
+		return GetTemperature(temperature, allowedRecursions - 1);
 	}
 
 	// Line must contain at least "YES" at the end...
 	if (data.length() < 3)
 	{
-		outStream << "File contents too short" << std::endl;
-		return false;
+		outStream << "File contents too short (" << deviceID << ")" << std::endl;
+		return GetTemperature(temperature, allowedRecursions - 1);
 	}
 
 	if (data.substr(data.length() - 3).compare("YES") != 0)
 	{
-		outStream << "Bad checksum" << std::endl;
-		return false;
+		// This happens quite often - might want to disable this statement
+		// after testing is complete, to avoid spamming?
+		outStream << "Bad checksum (" << deviceID << ")" << std::endl;
+		return GetTemperature(temperature, allowedRecursions - 1);
 	}
 
 	if (!std::getline(file, data))
 	{
 		outStream << "Failed to read temperature from file '" << device << "'" << std::endl;
-		return false;
+		return GetTemperature(temperature, allowedRecursions - 1);
 	}
 
 	size_t start(data.find("t="));
 	if (start == std::string::npos)
 	{
-		outStream << "Temperature reading does not contain 't='" << std::endl;
-		return false;
+		outStream << "Temperature reading does not contain 't='"
+			<< " (" << deviceID << ")" << std::endl;
+		return GetTemperature(temperature, allowedRecursions - 1);
 	}
 
 	temperature = atof(data.substr(start + 2).c_str()) / 1000.0;
@@ -149,6 +155,8 @@ bool TemperatureSensor::GetTemperature(double &temperature) const
 //==========================================================================
 std::vector<std::string> TemperatureSensor::GetConnectedSensors(std::string searchDirectory)
 {
+	// Assume that this might be called when a new sensor is connected - therefore, don't
+	// use the initialized variable to determine whether or not to make these calls
 	system("modprobe w1-gpio");
 	system("modprobe w1-therm");
 
@@ -192,18 +200,18 @@ std::vector<std::string> TemperatureSensor::GetConnectedSensors(std::string sear
 
 //==========================================================================
 // Class:			TemperatureSensor
-// Function:		GetTemperature
+// Function:		DeviceIsDS18B20
 //
-// Description:		Reads current temperature from DS18B20 sensor.
+// Description:		Checks to make sure specified ROM is that of a DS18B20.
 //
 // Input Arguments:
-//		None
+//		rom	= std::string
 //
 // Output Arguments:
-//		temperature	= double& [deg F]
+//		None
 //
 // Return Value:
-//		bool, true for success, false otherwise
+//		bool, true for yes, false otherwise
 //
 //==========================================================================
 bool TemperatureSensor::DeviceIsDS18B20(std::string rom)

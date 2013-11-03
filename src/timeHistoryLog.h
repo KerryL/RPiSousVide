@@ -39,7 +39,7 @@ private:
 		struct timeval start;
 		unsigned int columns;
 
-		std::string GetTime(void);
+		double GetTime(void);
 		unsigned int GetColumnCount(void) const;
 	} buffer;
 

@@ -135,25 +135,20 @@ TimeHistoryLog::TimeHistoryStreamBuffer::TimeHistoryStreamBuffer(std::ostream &s
 //		None
 //
 // Return Value:
-//		std::string
+//		double
 //
 //==========================================================================
-std::string TimeHistoryLog::TimeHistoryStreamBuffer::GetTime(void)
+double TimeHistoryLog::TimeHistoryStreamBuffer::GetTime(void)
 {
-	unsigned long seconds, useconds;
 	double elapsed;
 	struct timeval now;
 	if (gettimeofday(&now, NULL) == -1)
 		std::cout << "Failed to get current time" << std::endl;
 
-	seconds  = now.tv_sec  - start.tv_sec;
-	useconds = now.tv_usec - start.tv_usec;
+	// All in one statement to prevent underflows in the usec calculation
+	elapsed = now.tv_sec - start.tv_sec + now.tv_usec * 1.0e-6 - start.tv_usec * 1.0e-6;
 
-	elapsed = seconds + useconds / 1000000.0 + 0.0005;
-
-	std::stringstream ss;
-	ss << elapsed;
-	return ss.str();
+	return elapsed;
 }
 
 //==========================================================================

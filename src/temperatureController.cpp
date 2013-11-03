@@ -44,7 +44,7 @@ TemperatureController::TemperatureController(double timeStep,
 
 	SetOutputClamp(0.0, 1.0);
 	SetOutputEnable(false);
-	sensorOK = false;
+	ReadTemperature();// Sets sensorOK value
 }
 
 //==========================================================================

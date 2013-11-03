@@ -110,7 +110,9 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 		double feedForwardScale, unsigned int ambTempSegments)
 {
 	assert(time.size() == temperature.size());
-	assert(time.size() > 2);// Really it should be much larger, but we'll crash if it's smaller than 2
+	
+	if (time.size() < 2)
+		return false;
 
 	// If we wanted to filter the data, it would be done here
 	// I don't think it's necessary, though, so we're leaving it out
@@ -125,8 +127,22 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 			croppedTime.push_back(time[i]);
 			croppedTemp.push_back(temperature[i]);
 			dTdt.push_back((temperature[i] - temperature[i - 1]) / (time[i] - time[i - 1]));
+			
+			// If dTdt is zero or negative, we'll get errors when
+			// we compute C1 and take the log of dTdt
+			if (dTdt[dTdt.size() - 1] <= 0.0)
+			{
+				dTdt[dTdt.size() - 1] = 1e-10;// Some very small number (w.r.t sensor resolution)
+				outStream << "Warning:  Replacing negative dTdt at t = " << time[i] << std::endl;
+			}
 		}
-
+	}
+	
+	if (croppedTime.size() < 2)
+	{
+		outStream << "Not enough data - data must span at least "
+			<< ignoreInitialTime << " seconds" << std::endl;
+		return false;
 	}
 
 	if (!ComputeC1(croppedTime, dTdt))
@@ -275,7 +291,13 @@ void AutoTuner::ComputeAmbientTemperature(const std::vector<double> &time,
 		const std::vector<double> &temperature, unsigned int segments)
 {
 	assert(time.size() == temperature.size());
-	assert(time.size() > segments);
+	assert(time.size() > 1);
+	
+	if (time.size() <= segments)
+	{
+		outStream << "Warning:  Number of points used to compute ambient temperature is below " << segments << std::endl;
+		segments = time.size() - 1;
+	}
 
 	double total(0.0), rate;
 	unsigned int i, startIndex(0), endIndex;

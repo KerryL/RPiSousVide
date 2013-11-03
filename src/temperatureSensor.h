@@ -22,7 +22,7 @@ public:
 	TemperatureSensor(std::string deviceID, std::ostream& outStream = std::cout,
 		std::string baseDirectory = "/sys/bus/w1/devices/");
 
-	bool GetTemperature(double &temperature) const;// [deg C]
+	bool GetTemperature(double &temperature, unsigned int allowedRecursions = 3) const;// [deg C]
 
 	static std::vector<std::string> GetConnectedSensors(
 		std::string searchDirectory = "/sys/bus/w1/devices/");
@@ -32,7 +32,7 @@ private:
 	static bool initialized;
 	static const std::string deviceFile;
 
-	const std::string device;
+	const std::string deviceID, device;
 	std::ostream &outStream;
 };
 
