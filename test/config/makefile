@@ -13,7 +13,9 @@ DIRS = \
 # Source files
 SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp)) \
 	.src/sousVideConfig.cpp \
-	.src/configFile.cpp
+	.src/configFile.cpp \
+	.src/autoTuner.cpp \
+	.src/matrix.cpp
 
 # Object files
 OBJS = $(addprefix $(OBJDIR),$(SRC:.cpp=.o))
@@ -26,6 +28,8 @@ copy:
 	$(MKDIR) .src/
 	cp ../../src/sousVideConfig.cpp .src/
 	cp ../../src/configFile.cpp .src/
+	cp ../../src/autoTuner.cpp .src/
+	cp ../../src/matrix.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

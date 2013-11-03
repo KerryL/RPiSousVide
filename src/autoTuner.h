@@ -107,6 +107,9 @@ public:
 		double desiredDamping = 5.0, double maxRateScale = 0.95,
 		double referenceTemperature = 180.0, double feedForwardScale = 0.8,
 		unsigned int ambTempSegments = 20);
+		
+	static double GetMinimumAutoTuneTime(double sampleRate,
+		unsigned int ambTempSegments = 20);// [sec]
 
 	double GetC1(void) const { return c1; };// [1 / sec]
 	double GetC2(void) const { return c2; };// [deg F/BTU]
@@ -132,6 +135,7 @@ public:
 
 private:
 	std::ostream &outStream;
+	static const double ignoreInitialTime;// [sec]
 
 	void InitializeMembers(void);
 

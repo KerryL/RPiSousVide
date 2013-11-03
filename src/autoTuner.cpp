@@ -21,6 +21,24 @@
 
 //==========================================================================
 // Class:			AutoTuner
+// Function:		Constant definitions
+//
+// Description:		Constant definitions for AutoTuner class.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+const double AutoTuner::ignoreInitialTime = 5.0;// [sec]
+
+//==========================================================================
+// Class:			AutoTuner
 // Function:		AutoTuner
 //
 // Description:		Constructor for AutoTuner class.
@@ -117,7 +135,6 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 	// If we wanted to filter the data, it would be done here
 	// I don't think it's necessary, though, so we're leaving it out
 
-	const double ignoreInitialTime(5.0);// [sec]
 	std::vector<double> croppedTime, croppedTemp, dTdt;
 	unsigned int i;
 	for (i = 1; i < time.size(); i++)
@@ -640,4 +657,27 @@ double AutoTuner::PredictRateOfChange(double control, double tankTemperature,
 {
 	assert(control >= 0.0 && control <= 1.0);
 	return c1 * (ambientTemperature - tankTemperature) + c2 * control;
+}
+
+//==========================================================================
+// Class:			AutoTuner
+// Function:		GetMinimumAutoTuneTime
+//
+// Description:		Computes the minimum time to collect data for good auto-tune results.
+//
+// Input Arguments:
+//		sampleRate		= double, frequency at which data is collected [Hz]
+//		ambTempSegments	= unsigned int, minimum number of data points to collect
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		double, [sec]
+//
+//==========================================================================
+double AutoTuner::GetMinimumAutoTuneTime(double sampleRate,
+	unsigned int ambTempSegments)
+{
+	return ignoreInitialTime + (ambTempSegments + 1) / sampleRate;
 }

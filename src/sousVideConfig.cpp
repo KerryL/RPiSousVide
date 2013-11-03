@@ -9,6 +9,7 @@
 
 // Local headers
 #include "sousVideConfig.h"
+#include "autoTuner.h"
 
 //==========================================================================
 // Class:			SousVideConfig
@@ -412,6 +413,13 @@ bool SousVideConfig::SystemConfigIsOK(void)
 	if (system.maxAutoTuneTime <= 0.0)
 	{
 		AppendToErrorMessage("System:  " + GetKey(system.maxAutoTuneTime) + " must be strictly positive");
+		ok = false;
+	}
+	else if (system.maxAutoTuneTime < AutoTuner::GetMinimumAutoTuneTime(system.idleFrequency))
+	{
+		std::stringstream ss;
+		ss << AutoTuner::GetMinimumAutoTuneTime(system.idleFrequency) << " sec";
+		AppendToErrorMessage("System:  " + GetKey(system.maxAutoTuneTime) + " must be at least " + ss.str());
 		ok = false;
 	}
 

@@ -644,8 +644,9 @@ void SousVide::EnterState(void)
 			<< configuration->system.maxAutoTuneTime / 60.0
 			<< " minutes, or when temperature reaches "
 			<< configuration->system.maxAutoTuneTemperatureRise
-			+ startTemperature
-			<< " deg F" << std::endl;
+			+ startTemperature << "deg F and "
+			<< AutoTuner::GetMinimumAutoTuneTime(configuration->system.idleFrequency)
+			<< " sec has elapsed" << std::endl;
 	}
 	else
 		assert(false);
@@ -769,8 +770,12 @@ void SousVide::ProcessState(void)
 			controller->GetActualTemperature());
 
 		time_t now = time(NULL);
-		if (difftime(now, stateStartTime) > configuration->system.maxAutoTuneTime ||
-			controller->GetActualTemperature() - startTemperature > configuration->system.maxAutoTuneTemperatureRise)
+		double autoTuneTime = difftime(now, stateStartTime);
+		double minAutoTuneTime = AutoTuner::GetMinimumAutoTuneTime(configuration->system.idleFrequency);
+		assert(minAutoTuneTime < configuration->system.maxAutoTuneTime);
+		if ((autoTuneTime > configuration->system.maxAutoTuneTime ||
+			controller->GetActualTemperature() - startTemperature > configuration->system.maxAutoTuneTemperatureRise) &&
+			autoTuneTime > minAutoTuneTime)
 			nextState = StateInitializing;
 
 		if (command == CmdStop)
@@ -1125,8 +1130,8 @@ std::string SousVide::GetLogFileName(const std::string &activity) const
 	timeStamp << timeInfo->tm_year + 1900 << "-"
 		<< std::setw(2) << timeInfo->tm_mon + 1 << "-"
 		<< std::setw(2) << timeInfo->tm_mday << " "
-		<< std::setw(2) << timeInfo->tm_hour << ":"
-		<< std::setw(2) << timeInfo->tm_min << ":"
+		<< std::setw(2) << timeInfo->tm_hour << "-"// Use dashes instead of colons so user can view logs on MSW
+		<< std::setw(2) << timeInfo->tm_min << "-"
 		<< std::setw(2) << timeInfo->tm_sec
 		<< " " << activity << ".log";
 
