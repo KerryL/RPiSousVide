@@ -635,16 +635,18 @@ void SousVide::EnterState(void)
 	{
 		ResetPlot();
 
-		pumpRelay->SetOutput(true);
-		controller->DirectlySetPWMDuty(1.0);
+		EnterActiveState();
 		SetUpAutoTuneLog();
+		
+		controller->SetOutputEnable(false);
+		controller->DirectlySetPWMDuty(1.0);
 		startTemperature = controller->GetActualTemperature();
 		
 		*logger << "Auto-tune will stop in "
 			<< configuration->system.maxAutoTuneTime / 60.0
 			<< " minutes, or when temperature reaches "
 			<< configuration->system.maxAutoTuneTemperatureRise
-			+ startTemperature << "deg F and "
+			+ startTemperature << " deg F and "
 			<< AutoTuner::GetMinimumAutoTuneTime(configuration->system.idleFrequency)
 			<< " sec has elapsed" << std::endl;
 	}
@@ -682,8 +684,8 @@ void SousVide::ProcessState(void)
 	}
 
 	// TODO:  When to call UpdatePlotFile()?
-	/*if (plotTime.size() > 100)
-		UpdatePlotFile();*/
+	if (plotTime.size() > 10)
+		UpdatePlotFile();
 
 	if (state == StateOff)
 	{
@@ -834,8 +836,7 @@ void SousVide::ExitState(void)
 	}
 	else if (state == StateAutoTune)
 	{
-		controller->DirectlySetPWMDuty(0.0);
-		pumpRelay->SetOutput(false);
+		ExitActiveState();
 
 		std::vector<double> time, temp;
 		if (!CleanUpAutoTuneLog(time, temp))

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 
 // Local headers
 #include "autoTuner.h"
@@ -33,13 +34,25 @@ int main(int argc, char *argv[])
 
 	string line;
 	vector<double> time, temp;
-	size_t split;
+	double value;
+	stringstream ss;
+	
+	// Ignore first two lines
+	getline(dataFile, line);
+	getline(dataFile, line);
+	
 	while (getline(dataFile, line))
 	{
-		split = line.find_first_not_of(' ');
-		split = line.find(' ', split + 1);
-		time.push_back(atof(line.substr(0, split).c_str()));
-		temp.push_back(atof(line.substr(split).c_str()));
+		ss.clear();
+		ss.str(line);
+		ss >> value;
+		time.push_back(value);
+		
+		if (ss.peek() == ',')
+			ss.ignore();
+			
+		ss >> value;
+		temp.push_back(value);
 	}
 
 	dataFile.close();

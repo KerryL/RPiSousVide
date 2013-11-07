@@ -135,11 +135,13 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 	// If we wanted to filter the data, it would be done here
 	// I don't think it's necessary, though, so we're leaving it out
 
+	const double ignoreInitialTemperatureRise(1.0);// [deg F]
 	std::vector<double> croppedTime, croppedTemp, dTdt;
 	unsigned int i;
 	for (i = 1; i < time.size(); i++)
 	{
-		if (time[i] > ignoreInitialTime)
+		if (time[i] > ignoreInitialTime &&
+			temperature[i] > temperature[0] + ignoreInitialTemperatureRise)
 		{
 			croppedTime.push_back(time[i]);
 			croppedTemp.push_back(temperature[i]);
@@ -150,7 +152,7 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 			if (dTdt[dTdt.size() - 1] <= 0.0)
 			{
 				dTdt[dTdt.size() - 1] = 1e-10;// Some very small number (w.r.t sensor resolution)
-				outStream << "Warning:  Replacing negative dTdt at t = " << time[i] << std::endl;
+				outStream << "Warning:  Replacing negative dT/dt at t = " << time[i] << std::endl;
 			}
 		}
 	}
