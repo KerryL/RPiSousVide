@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 	cout << "Recommended Gains:" << endl;
 	cout << "  Kp = " << tuner.GetKp() << " %/deg F" << endl;
 	cout << "  Ti = " << tuner.GetTi() << " sec" << endl;
-	cout << "  Kf = " << tuner.GetKf() << " deg F/BTU" << endl;
+	cout << "  Kf = " << tuner.GetKf() << " %-sec/deg F" << endl;
 
 	cout << "Other parameters:" << endl;
 	cout << "  Max. Heat Rate = " << tuner.GetMaxHeatRate() << " deg F/sec" << endl;

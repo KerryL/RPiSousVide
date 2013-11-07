@@ -853,7 +853,7 @@ void SousVide::ExitState(void)
 			*logger << "Recommended Gains:" << std::endl;
 			*logger << "  Kp = " << tuner.GetKp() << " %/deg F" << std::endl;
 			*logger << "  Ti = " << tuner.GetTi() << " sec" << std::endl;
-			*logger << "  Kf = " << tuner.GetKf() << " deg F/BTU" << std::endl;
+			*logger << "  Kf = " << tuner.GetKf() << " %-sec/deg F" << std::endl;
 
 			*logger << "Other parameters:" << std::endl;
 			*logger << "  Max. Heat Rate = " << tuner.GetMaxHeatRate() << " deg F/sec" << std::endl;
