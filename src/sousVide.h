@@ -14,6 +14,9 @@
 #include <vector>
 #include <time.h>
 
+// Local headers
+#include "combinedLogger.h"
+
 // Local forward declarations
 class NetworkInterface;
 class TemperatureController;
@@ -24,7 +27,6 @@ struct BackToFrontMessage;
 class GNUPlotter;
 class TimingUtility;
 class SousVideConfig;
-class CombinedLogger;
 
 class SousVide
 {
@@ -71,7 +73,7 @@ private:
 	double plateauTemperature;// [deg F]
 	double soakTime;// [sec]
 
-	CombinedLogger *logger;
+	CombinedLogger logger;
 	std::ofstream logFile;
 
 	TimingUtility *loopTimer;
