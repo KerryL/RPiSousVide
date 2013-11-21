@@ -8,7 +8,8 @@
 # be added automatically
 INCDIRS_TEMP = \
 	/usr/local/include \
-	$(CURDIR)/../../src
+	$(CURDIR)/../../src \
+	$(CURDIR)/../../src/rpi
 
 INCDIRS = $(addprefix -I,$(INCDIRS_TEMP))
 

@@ -24,8 +24,8 @@ all: $(TARGET)
 
 copy:
 	$(MKDIR) .src/
-	cp ../../src/temperatureSensor.cpp .src/
-	cp ../../src/timingUtility.cpp .src/
+	cp ../../src/rpi/temperatureSensor.cpp .src/
+	cp ../../src/rpi/timingUtility.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

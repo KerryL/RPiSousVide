@@ -11,8 +11,8 @@
 // Local headers
 #include "temperatureController.h"
 #include "sousVideConfig.h"
-#include "temperatureSensor.h"
-#include "pwmOutput.h"
+#include "rpi/temperatureSensor.h"
+#include "rpi/pwmOutput.h"
 
 //==========================================================================
 // Class:			TemperatureController

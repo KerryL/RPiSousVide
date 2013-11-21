@@ -26,10 +26,10 @@ all: $(TARGET)
 
 copy:
 	$(MKDIR) .src/
-	cp ../../src/logger.cpp .src/
-	cp ../../src/combinedLogger.cpp .src/
-	cp ../../src/timeHistoryLog.cpp .src/
-	cp ../../src/mutexLocker.cpp .src/
+	cp ../../src/logging/logger.cpp .src/
+	cp ../../src/logging/combinedLogger.cpp .src/
+	cp ../../src/logging/timeHistoryLog.cpp .src/
+	cp ../../src/utilities/mutexLocker.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

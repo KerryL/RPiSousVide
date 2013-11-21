@@ -8,7 +8,10 @@ TARGET = sousVide
 
 # Directories in which to search for source files
 DIRS = \
-	src
+	src \
+	src/utilities \
+	src/logging \
+	src/rpi
 
 # Source files
 SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))

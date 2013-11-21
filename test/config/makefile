@@ -27,7 +27,7 @@ all: $(TARGET)
 copy:
 	$(MKDIR) .src/
 	cp ../../src/sousVideConfig.cpp .src/
-	cp ../../src/configFile.cpp .src/
+	cp ../../src/utilities/configFile.cpp .src/
 	cp ../../src/autoTuner.cpp .src/
 	cp ../../src/matrix.cpp .src/
 

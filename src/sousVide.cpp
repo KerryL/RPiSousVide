@@ -22,17 +22,17 @@
 // Local headers
 #include "sousVide.h"
 #include "networkInterface.h"
-#include "gpio.h"
-#include "temperatureSensor.h"
-#include "pwmOutput.h"
 #include "temperatureController.h"
-#include "logger.h"
-#include "timeHistoryLog.h"
 #include "networkMessageDefs.h"
 #include "autoTuner.h"
 #include "gnuPlotter.h"
 #include "sousVideConfig.h"
-#include "timingUtility.h"
+#include "rpi/gpio.h"
+#include "rpi/pwmOutput.h"
+#include "rpi/temperatureSensor.h"
+#include "rpi/timingUtility.h"
+#include "logging/logger.h"
+#include "logging/timeHistoryLog.h"
 
 //==========================================================================
 // Class:			None

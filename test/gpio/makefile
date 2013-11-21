@@ -27,9 +27,9 @@ copy:
 	echo $(SRC)
 	echo $(OBJS)
 	$(MKDIR) .src/
-	cp ../../src/gpio.cpp .src/
-	cp ../../src/pwmOutput.cpp .src/
-	cp ../../src/timingUtility.cpp .src/
+	cp ../../src/rpi/gpio.cpp .src/
+	cp ../../src/rpi/pwmOutput.cpp .src/
+	cp ../../src/rpi/timingUtility.cpp .src/
 
 $(TARGET): copy $(OBJS)
 	$(MKDIR) $(BINDIR)

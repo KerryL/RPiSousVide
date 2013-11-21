@@ -8,7 +8,9 @@
 # be added automatically
 INCDIRS_TEMP = \
 	/usr/local/include \
-	$(CURDIR)/../../src
+	$(CURDIR)/../../src \
+	$(CURDIR)/../../src/logging \
+	$(CURDIR)/../../src/utilities
 
 INCDIRS = $(addprefix -I,$(INCDIRS_TEMP))
 

@@ -15,7 +15,7 @@
 #include <time.h>
 
 // Local headers
-#include "combinedLogger.h"
+#include "logging/combinedLogger.h"
 
 // Local forward declarations
 class NetworkInterface;
