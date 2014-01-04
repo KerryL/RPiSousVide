@@ -9,11 +9,8 @@
 //
 // Assumptions:
 //   - Fluid is well mixed, but no heat is added via mixing
-
 //   - Ambient temperature is constant (i.e. we're not modeling the increase in
-
 //     room temperature as the tank looses heat)
-
 //   - Constant fluid properties vs. temperature
 //   - No flow in or out of tank
 //   - Constant rate of heat transfer through all tank surfaces (i.e. effect of
@@ -65,9 +62,9 @@
 // The system block diagram looks like this:
 //
 //                                  +     U(s)
-//            ------->[ Kf * s ]----->o-------->[ G(s) ]------> Y(s)
-//            |                     + ^                   |
-//          + |    E(s)               |                   |
+//         ---------->[ Kf * s ]----->o-------->[ G(s) ]------> Y(s)
+//         |                        + ^                   |
+//         | +     E(s)               |                   |
 //   R(s) --->o--------->[ C(s) ]-----|                   |
 //          - ^                                           |
 //            |--------------------------------------------
@@ -81,9 +78,7 @@
 // on this can be found in the ComputeRecommendedGains method in autoTune.cpp) is then:
 //
 //   Y(s)              Kp * s + Kp / Ti
-
 //   ---- = ---------------------------------------
-
 //   R(s)   s^2 / c2 + (Kp + c1 / c2) * s + Kp / Ti
 
 #ifndef AUTO_TUNER_H_
