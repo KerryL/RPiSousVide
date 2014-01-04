@@ -1,8 +1,20 @@
 Raspbery Pi Sous Vide Controller
 
+Date:       11/21/2013
+Author:     K. Loux
+Copyright:  Copyright 2013 Kerry Loux and Matt Jarvis
+License:    GPLv2 (see LICENSE file)
+
 This application includes an interface to gnuplot (using pipes) that is roughly based on gnuplot_i module written by N. Devillard <nDevil@eso.org>.  More information can be obtained from http://ndevilla.free.fr/gnuplot/.
 
 This application uses cJSON, which is licesned under the MIT license.  Read more here:  sourceforge.net/project/cjson.  To make compiling easier, cJSON.c was renamed to cJSON.cpp.  The JSON test renames the file back to .c I was curious as to exactly how much kludge it would take to get it working - the comparative difficulty and ugliness makes the renaming solution so much more attractive.
+
+Note that this project uses three submodules, avaiable from here (and covered in the instructions below):
+utilities -> https://github.com/KerryL/utilities.git
+rpi -> https://github.com/KerryL/rpi.git
+logging -> https://github.com/KerryL/logging.git
+
+All three submodules are licensed under the MIT license.
 
 Starting with a brand new Raspberry Pi, follow these instructions to get started.
 
@@ -37,7 +49,13 @@ Again, cross-compiling makes stuff more difficult.  The instructions above are f
 5.  Install gnuplot on the Raspberry Pi.  Execute the following command:
 $ sudo apt-get install gnuplot-x11
 
-5.  Build RPiSousVide using the included makefile (make changes as appropriate if you didn't exactly follow the instructions above), and copy to your Raspberry Pi.  Note that re-building can be carried out by using '$make clean' followed by '$make' if using the included makefile.
+6.  Get the source.  Do the following (some additional steps due to git submodules make this slightly more difficult than just cloning):
+$ git clone https://github.com/KerryL/RPiSousVide.git
+$ cd RPiSousVide
+$ git submodule init
+$ git submodule update --recursive
+
+7.  Build RPiSousVide using the included makefile (make changes as appropriate if you didn't exactly follow the instructions above), and copy to your Raspberry Pi.  Note that re-building can be carried out by using '$make clean' followed by '$make' if using the included makefile.
 
 6.  Configure Raspberry Pi to use application as a service... TODO - let's get the thing built first
 
