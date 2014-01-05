@@ -13,29 +13,6 @@
 
 // Local headers
 #include "autoTuner.h"
-#include "matrix.h"
-
-#ifdef WIN32
-#define isinf(x) x - x == 0.0 ? false : true
-#endif
-
-//==========================================================================
-// Class:			AutoTuner
-// Function:		Constant definitions
-//
-// Description:		Constant definitions for AutoTuner class.
-//
-// Input Arguments:
-//		None
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		None
-//
-//==========================================================================
-const double AutoTuner::ignoreInitialTime = 5.0;// [sec]
 
 //==========================================================================
 // Class:			AutoTuner
@@ -79,6 +56,7 @@ void AutoTuner::InitializeMembers(void)
 	// Choose invalid values so it's obvious when we have not yet run
 	c1 = -1.0;
 	c2 = -1.0;
+	tau = -1.0;
 
 	kp = -1.0;
 	ti = -1.0;
@@ -132,120 +110,116 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 	if (time.size() < 2)
 		return false;
 
-	// If we wanted to filter the data, it would be done here
-	// I don't think it's necessary, though, so we're leaving it out
-
-	const double ignoreInitialTemperatureRise(1.0);// [deg F]
-	std::vector<double> croppedTime, croppedTemp, dTdt;
-	unsigned int i;
-	for (i = 1; i < time.size(); i++)
+	Matrix x(3,1);
+	if (!ComputeRegressionCoefficients(time, temperature, x))
 	{
-		if (time[i] > ignoreInitialTime &&
-			temperature[i] > temperature[0] + ignoreInitialTemperatureRise)
-		{
-			croppedTime.push_back(time[i]);
-			croppedTemp.push_back(temperature[i]);
-			dTdt.push_back((temperature[i] - temperature[i - 1]) / (time[i] - time[i - 1]));
-			
-			// If dTdt is zero or negative, we'll get errors when
-			// we compute C1 and take the log of dTdt
-			if (dTdt[dTdt.size() - 1] <= 0.0)
-			{
-				dTdt[dTdt.size() - 1] = 1e-10;// Some very small number (w.r.t sensor resolution)
-				outStream << "Warning:  Replacing negative dT/dt at t = " << time[i] << std::endl;
-			}
-		}
+		outStream << "Failed to compute regression coefficients" << std::endl;
+		return false;
+	}
+	/*x(0,0)=800.0/6432201.0;
+	x(1,0)=6367801.0/6432201.0;
+	x(2,0)=-1422222.0/714689.0;*/
+	std::cout << "x = \n" << x << std::endl;
+
+	if (!ComputeParametersFromCoefficients(x, ComputeMeanSampleTime(time)))
+	{
+		outStream << "Failed to compute system parameters" << std::endl;
+		return false;
 	}
 	
-	if (croppedTime.size() < 2)
-	{
-		outStream << "Not enough data - data must span at least "
-			<< ignoreInitialTime << " seconds" << std::endl;
-		return false;
-	}
+	// TODO:  Fix this stuff
+	double a(desiredDamping * desiredBandwidth * feedForwardScale * maxRateScale * referenceTemperature * ambTempSegments);
+	a = a * a;
 
-	if (!ComputeC1(croppedTime, dTdt))
-	{
-		outStream << "Encoutered errors while estimating model parameter c1" << std::endl;
-		return false;
-	}
-
-	if (!ComputeC2(croppedTime, dTdt))
-	{
-		outStream << "Encoutered errors while estimating model parameter c2" << std::endl;
-		return false;
-	}
-
-	ComputeAmbientTemperature(croppedTime, croppedTemp, ambTempSegments);
+	/*ComputeAmbientTemperature(croppedTime, croppedTemp, ambTempSegments);
 	ComputeMaxHeatRate(maxRateScale, referenceTemperature);
-	ComputeRecommendedGains(desiredBandwidth, desiredDamping, feedForwardScale);
+	ComputeRecommendedGains(desiredBandwidth, desiredDamping, feedForwardScale);*/
 
 	return MembersAreValid();
 }
 
 //==========================================================================
 // Class:			AutoTuner
-// Function:		ComputeC1
+// Function:		ComputeRegressionCoefficients
 //
-// Description:		Computes the model parameter c1 and stores it in the member
-//					variable.
+// Description:		Assembles matrices and performs linear regression.  The
+//					regression is based on finding the coefficients for the
+//					difference equation for the open loop system.  We also
+//					assume that the input to the system was 100% during the
+//					time that the auto-tune data was collected.  This allows
+//					us to simplify the numerator of the discrete time transfer
+//					function, leaving us with only three coefficients.
 //
 // Input Arguments:
-//		time	= const std::vector<double>& [sec]
-//		dTdt	= const std::vector<double>& [deg F/sec]
+//		time		= const std::vector<double>& [sec]
+//		temperature	= const std::vector<double>& [deg F]
 //
 // Output Arguments:
-//		None
+//		x			= Matrix&
 //
 // Return Value:
 //		true for success, false otherwise
 //
 //==========================================================================
-bool AutoTuner::ComputeC1(const std::vector<double> &time, const std::vector<double> &dTdt)
+bool AutoTuner::ComputeRegressionCoefficients(const std::vector<double> &time,
+	const std::vector<double> &temperature, Matrix &x)
 {
-	assert(time.size() == dTdt.size());
-
-	// The first step in the curve fitting process is to fit a curve of the form
-	// y = m * x + b to the natural log of the rate of change of the temperature.
-	// the oppostie of the slope of this curve is equal to the model parameter c1.
-	// In other words, we're fitting an equation of the form y = -c1 * time + b.
-
-	Matrix A(time.size(), 2), b(time.size(), 1);
+	assert(time.size() == temperature.size());
+	
+	// Ignore first two rows of data, so we subtract 2 from the size
+	Matrix A(time.size() - 2, 3), b(time.size() - 2, 1);
 	unsigned int i;
 	for (i = 0; i < A.GetNumberOfRows(); i++)
 	{
-		A(i, 0) = time[i];
-		A(i, 1) = 1.0;
-		b(i, 0) = log(dTdt[i]);
-
-		if (isinf(b(i, 0)) || b(i, 0) != b(i, 0))
-		{
-			outStream << "Error while performing linear regression:  Invalid value encountered" << std::endl;
-			return false;
-		}
+		A(i, 0) = 1.0;
+		A(i, 1) = -temperature[i];// 2 time steps ago
+		A(i, 2) = -temperature[i + 1];// 1 time step ago
+		b(i, 0) = temperature[i + 2];// current time step
 	}
-
-	Matrix x;
+	
 	if (!A.LeftDivide(b, x))
-	{
-		outStream << "Error while solving matrix equation for c1" << std::endl;
 		return false;
-	}
-	c1 = -x(0,0);
-
+		
 	return true;
 }
 
 //==========================================================================
 // Class:			AutoTuner
-// Function:		ComputeC2
+// Function:		ComputeParametersFromCoefficients
 //
-// Description:		Computes the model parameter c2 and stores it in the member
-//					variable.
+// Description:		The system parameters (c1, c2 and tau) are determined by
+//					setting the coefficients of the difference equation equal
+//					to the hand-solved coefficients from the model, and
+//					solving for the system parameters.  The discrete time
+//					transfer function is:
+//
+//					Y(z)   c2 * ( 1 + 2 * z^-1 + z^-2) * T
+//					---- = -------------------------------
+//					U(z)       O * z^-2 + P * z^-1 + Q
+//
+//					where
+//
+//					O = 4 * tau - 2 * T * (c1 * tau + 1) + c1 * T^2
+//					P = 2 * c1 * T^2 - 8 * tau
+//					Q = c1 * T^2 + 2 * T * (c1 * tau + 1) + 4 * tau
+//					and T is the sampe time for the data
+//
+//					Making the assumtion that the input to the system is 1 for
+//					all time (during the data collection for the auto-tune
+//					process), we can reduce the numerator to:
+//					N = 4 * c2 * T^2
+//
+//					From this and the the z-domain transfer function, we know:
+//					Y(k) = (N - O * Y(k - 2) - P * Y(k - 1)) / Q
+//
+//					So we have:
+//					x(0) = N / Q
+//					x(1) = O / Q
+//					x(2) = P / Q
 //
 // Input Arguments:
-//		time	= const std::vector<double>& [sec]
-//		dTdt	= const std::vector<double>& [deg F/sec]
+//		x			= const Matrix&
+//		sampleTime	= const double& [sec]
 //
 // Output Arguments:
 //		None
@@ -254,36 +228,59 @@ bool AutoTuner::ComputeC1(const std::vector<double> &time, const std::vector<dou
 //		true for success, false otherwise
 //
 //==========================================================================
-bool AutoTuner::ComputeC2(const std::vector<double> &time, const std::vector<double> &dTdt)
+bool AutoTuner::ComputeParametersFromCoefficients(const Matrix &x,
+	const double &sampleTime)
 {
-	assert(time.size() == dTdt.size());
-
-	// The second step in the curve fitting process is to fit an exponential curve
-	// to the rate of change data.  The rate of change should decay exponentially,
-	// assuming we have a constant heat input (the heat input is constant, but the
-	// heat escaping into the room slowly increases as the delta temperature between
-	// the tank and the room increases).
-	// Normally, fitting an exponential would be non-linear, but we linearized and
-	// solved for the coefficient in ComputeC1, so we can now find the coefficient
-	// to the exponential, which is the model parameter c2.
-
-	Matrix A(time.size(), 1), b(time.size(), 1);
-	unsigned int i;
-	for (i = 0; i < A.GetNumberOfRows(); i++)
-	{
-		A(i, 0) = exp(-c1 * time[i]);
-		b(i, 0) = dTdt[i];
-	}
-
-	Matrix x;
-	if (!A.LeftDivide(b, x))
-	{
-		outStream << "Error while solving matrix equation for c2" << std::endl;
-		return false;
-	}
-	c2 = x(0,0);
-
+	c1 = (x(1,0) - 1 + sqrt(x(2,0) * x(2,0) - 4 * x(1,0)))
+		/ (sampleTime / 2 * (x(2,0) - x(1,0) - 1));
+    tau = (sampleTime * sampleTime * c1 * (2 - x(2,0)) - 2 * sampleTime * x(2,0))
+		/ (2 * x(2,0) * (c1 * sampleTime + 2) + 8);
+    c2 = x(0,0) / 4 / sampleTime / sampleTime
+		* (c1 * sampleTime * sampleTime
+		+ 2 * sampleTime * (c1 * tau + 1) + 4 * tau);
+		
 	return true;
+}
+
+//==========================================================================
+// Class:			AutoTuner
+// Function:		ComputeMeanSampleTime
+//
+// Description:		Computes the mean sample time and prints some statistical
+//					information about the time vector.
+//
+// Input Arguments:
+//		time	= const std::vector<double>&
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		double, average sample time
+//
+//==========================================================================
+double AutoTuner::ComputeMeanSampleTime(const std::vector<double> &time) const
+{
+	double mean((time[time.size() - 1] - time[0]) / (time.size() - 1.0));
+	double d(0.0), minDT(time[time.size() - 1]), maxDT(0.0), dt;
+	unsigned int i;
+	for (i = 1; i < time.size(); i++)
+	{
+		dt = time[i] - time[i - 1];
+		if (dt < minDT)
+			minDT = dt;
+		if (dt > maxDT)
+			maxDT = dt;
+			
+		d += (dt - mean) * (dt - mean);
+	}
+	
+	outStream << "Average sample time = " << mean << " sec" << std::endl;
+	outStream << "Standard deviation = " << sqrt(d / (time.size() - 1)) << " sec" << std::endl;
+	outStream << "Maximum sample time = " << maxDT << " sec" << std::endl;
+	outStream << "Minimum sample time = " << minDT << " sec" << std::endl;
+	
+	return mean;
 }
 
 //==========================================================================
@@ -309,6 +306,7 @@ bool AutoTuner::ComputeC2(const std::vector<double> &time, const std::vector<dou
 void AutoTuner::ComputeAmbientTemperature(const std::vector<double> &time,
 		const std::vector<double> &temperature, unsigned int segments)
 {
+	// TODO:  Update this
 	assert(time.size() == temperature.size());
 	assert(time.size() > 1);
 	
@@ -393,6 +391,8 @@ void AutoTuner::ComputeMaxHeatRate(double maxRateScale, double referenceTemperat
 void AutoTuner::ComputeRecommendedGains(double desiredBandwidth, double desiredDamping,
 	double feedForwardScale)
 {
+	// TODO:  Update for pole placement with 3rd order characteristic polynomial
+	
 	// The denominator of the closed-loop system transfer function is:
 	//   s^2 / c2 + (Kp + c1 / c2) * s + Kp / Ti
 	// If we multiply the entire equation by c2 to make the first term s^2,
@@ -454,6 +454,13 @@ bool AutoTuner::MembersAreValid(void) const
 	{
 		outStream << "Invalid Auto-Tune Result:  Model parameter c2 is negative (c2 = "
 			<< c2 << " deg F/BTU)" << std::endl;
+		valid = false;
+	}
+	
+	if (tau <= 0.0)
+	{
+		outStream << "Invalid Auto-Tune Result:  Model parameter tau is negative (tau = "
+			<< tau << " sec)" << std::endl;
 		valid = false;
 	}
 
@@ -523,10 +530,10 @@ bool AutoTuner::MembersAreValid(void) const
 //
 //==========================================================================
 bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
-	const std::vector<double> &control, std::vector<double> &temperature) const
+	const std::vector<double> &control, std::vector<double> &temperature)
 {
 	return GetSimulatedOpenLoopResponse(time, control, temperature,
-		ambientTemperature, ambientTemperature);
+		ambientTemperature);
 }
 
 //==========================================================================
@@ -552,7 +559,7 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 //==========================================================================
 bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 	const std::vector<double> &control, std::vector<double> &temperature,
-	double initialTemperature) const
+	double initialTemperature)
 {
 	return GetSimulatedOpenLoopResponse(time, control, temperature,
 		initialTemperature, ambientTemperature);
@@ -580,24 +587,27 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 //==========================================================================
 bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 	const std::vector<double> &control, std::vector<double> &temperature,
-	double initialTemperature, double ambientTemperature) const
+	double initialTemperature, double ambientTemperature)
 {
+	assert(time.size() == control.size());
+	
 	if (!MembersAreValid())
 		return false;
-
+		
+	BuildSimulationMatrices(initialTemperature, ambientTemperature, 0.0);// TODO:  Parameterize last argument
 	temperature.clear();
 
 	// Create the first data point
 	// We don't blindly push the initial temeprature, in case the time series we're
 	// using doesn't start at zero
-	temperature.push_back(GetSimulatedOpenLoopResponse(time[0], control[0],
-		initialTemperature, ambientTemperature));
+	ComputeNextTimeStep(control[0], time[0]);
+	temperature.push_back((output * state)(0,0));
 
 	unsigned int i;
 	for (i = 1; i < time.size(); i++)
 	{
-		temperature.push_back(GetSimulatedOpenLoopResponse(
-			time[i] - time[i - 1], control[i - 1], temperature[i - 1], ambientTemperature));
+		ComputeNextTimeStep(control[i], time[i] - time[i - 1]);
+		temperature.push_back((output * state)(0,0));
 	}
 
 	return true;
@@ -605,60 +615,26 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 
 //==========================================================================
 // Class:			AutoTuner
-// Function:		GetSimulatedOpenLoopResponse
+// Function:		ComputeNextTimeStep
 //
-// Description:		Generates the next expected temperature point.
-//
+// Description:		Computes the next time step using the state-space model.
 //
 // Input Arguments:
-//		deltaT				= double [sec]
-//		control				= double [%] (must be clamped to 0..1)
-//		tankTemperature		= double [deg F] at beginning of time step
-//		ambientTemperature	= double [deg F]
+//		control		= const double& [%]
+//		deltaTime	= const double& [sec]
 //
 // Output Arguments:
 //		None
 //
 // Return Value:
-//		double, next temperature value [deg F]
-//
-//==========================================================================
-double AutoTuner::GetSimulatedOpenLoopResponse(double deltaT, double control,
-	double tankTemperature, double ambientTemperature) const
-{
-	// NOTE:  The integrator we use here is just the forward Euler method -
-	//        chosen because it's easy to implement, not because it's accurate!
-	//        In using AB3 and RK4, though, the results are very similar (possibly
-	//        due to relativly high system inertia and constant control input?).
-
-	return tankTemperature + deltaT * PredictRateOfChange(control, tankTemperature, ambientTemperature);
-}
-
-//==========================================================================
-// Class:			AutoTuner
-// Function:		PredictRateOfChange
-//
-// Description:		Generates the next expected temperature point.
-//
-//
-// Input Arguments:
-//		deltaT				= double [sec]
-//		control				= double [%] (must be clamped to 0..1)
-//		initialTemperature	= double [deg F]
-//		ambientTemperature	= double [deg F]
-//
-// Output Arguments:
 //		None
 //
-// Return Value:
-//		double, next temperature value [deg F]
-//
 //==========================================================================
-double AutoTuner::PredictRateOfChange(double control, double tankTemperature,
-		double ambientTemperature) const
+void AutoTuner::ComputeNextTimeStep(const double &control, const double &deltaTime)
 {
-	assert(control >= 0.0 && control <= 1.0);
-	return c1 * (ambientTemperature - tankTemperature) + c2 * control;
+	Matrix stateDot(state);
+	stateDot = system * state + input * control;
+	state += stateDot * deltaTime;
 }
 
 //==========================================================================
@@ -678,8 +654,42 @@ double AutoTuner::PredictRateOfChange(double control, double tankTemperature,
 //		double, [sec]
 //
 //==========================================================================
-double AutoTuner::GetMinimumAutoTuneTime(double sampleRate,
-	unsigned int ambTempSegments)
+double AutoTuner::GetMinimumAutoTuneTime(double /*sampleRate*/,
+	unsigned int /*ambTempSegments*/)
 {
-	return ignoreInitialTime + (ambTempSegments + 1) / sampleRate;
+	return 0.0;//ignoreInitialTime + (ambTempSegments + 1) / sampleRate;
+}
+
+//==========================================================================
+// Class:			AutoTuner
+// Function:		BuildSimulationMatrices
+//
+// Description:		Builds the state-space system matrices as described in
+//					autoTuner.h.
+//
+// Input Arguments:
+//		initialTemperature	= double [deg F]
+//		ambientTemperature	= double [deg F]
+//		initialHeatLevel	= double [%]
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void AutoTuner::BuildSimulationMatrices(double initialTemperature,
+	double ambientTemperature, double initialHeatLevel)
+{
+	system = Matrix(3, 3, -c1, c1, c2, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0 / tau);
+	input = Matrix(3, 1, 0.0, 0.0, 1.0 / tau);
+	output = Matrix(1, 3, 1.0, 0.0, 0.0);
+	state = Matrix(3,1, initialTemperature, ambientTemperature, initialHeatLevel);
+	
+	outStream << "Built simulaiton matrices:\n";
+	outStream << "A =\n" << system << "\n\n";
+	outStream << "B =\n" << input << "\n\n";
+	outStream << "C =\n" << output << "\n\n";
+	outStream << "x =\n" << state << "\n" << std::endl;
 }

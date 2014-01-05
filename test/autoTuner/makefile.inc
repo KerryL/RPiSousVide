@@ -37,8 +37,8 @@ PSLIB = \
 	
 
 # Compiler to use
-CC = arm-unknown-linux-gnueabi-g++
-#CC = g++
+#CC = arm-unknown-linux-gnueabi-g++
+CC = g++
 
 # Archiver to use
 AR = arm-unknown-linux-gnueabi-ar rcs

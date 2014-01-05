@@ -18,7 +18,27 @@ using namespace std;
 
 // Application entry point
 int main(int argc, char *argv[])
-{
+{	
+	// TODO:  Remove below code for generating test data
+	/*std::vector<double> ttemp, ttime, ctrl;
+	unsigned int m;
+	for (m = 0; m < 1000; m++)
+	{
+		ttime.push_back(m * 0.1);
+		ctrl.push_back(1.0);
+	}
+	
+	AutoTuner at;
+	double initTemp(62.0), ambTemp(60.0);
+	at.GetSimulatedOpenLoopResponse(ttime, ctrl, ttemp, initTemp, ambTemp);
+
+	ofstream of("simulatedData.txt");
+	for (m = 0; m < ttemp.size(); m++)
+		of << ttime[m] << "," << ttemp[m] << std::endl;
+	
+	of.close();
+	return 0;//*/
+	
 	if (argc != 2)
 	{
 		cout << "Usage:  " << argv[0] << " pathToFile" << endl;
@@ -67,6 +87,7 @@ int main(int argc, char *argv[])
 	cout << "Model parameters:" << endl;
 	cout << "  c1 = " << tuner.GetC1() << " 1/sec" << endl;
 	cout << "  c2 = " << tuner.GetC2() << " deg F/BTU" << endl;
+	cout << "  tau = " << tuner.GetTau() << " sec" << endl;
 
 	cout << "Recommended Gains:" << endl;
 	cout << "  Kp = " << tuner.GetKp() << " %/deg F" << endl;
