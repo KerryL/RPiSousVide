@@ -1880,3 +1880,38 @@ bool Matrix::IsZero(const double &value)
 {
 	return fabs(value) < nearlyZero;
 }
+
+//==========================================================================
+// Class:			friend of Matrix
+// Function:		operator<<
+//
+// Description:		Overload of outstream operator.
+//
+// Input Arguments:
+//		o	= std::ostream&
+//		m	= const Matrix&
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		std::ostream&
+//
+//==========================================================================
+std::ostream& operator<<(std::ostream &o, const Matrix& m)
+{
+	unsigned int i, j;
+	for (i = 0; i < m.rows; i++)
+	{
+		if (i > 0)
+			o << "\n";
+		for (j = 0; j < m.columns; j++)
+		{
+			if (j > 0)
+				o << "\t";
+			o << m(i,j);
+		}
+	}
+	
+	return o;
+}

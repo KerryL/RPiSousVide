@@ -7,6 +7,9 @@
 #ifndef MATRIX_H_
 #define MATRIX_H_
 
+// Standard C++ headers
+#include <iostream>
+
 class Matrix
 {
 public:
@@ -74,6 +77,8 @@ public:
 	bool LeftDivide(const Matrix& b, Matrix &x) const;// x = A \ b
 	Matrix GetRowReduced(void) const;
 	unsigned int GetRank(void) const;
+	
+	friend std::ostream& operator<<(std::ostream &o, const Matrix& m);
 
 private:
 	static const double nearlyZero;
