@@ -344,7 +344,7 @@ void Matrix::Zero(void)
 Matrix Matrix::GetSubMatrix(const unsigned int &startRow, const unsigned int &startColumn,
 							const unsigned int &subRows, const unsigned int &subColumns) const
 {
-	assert(startRow + subRows < rows && startColumn + subColumns < columns);
+	assert(startRow + subRows <= rows && startColumn + subColumns <= columns);
 
 	Matrix subMatrix(subRows, subColumns);
 

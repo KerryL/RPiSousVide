@@ -14,6 +14,8 @@
 // Local headers
 #include "autoTuner.h"
 
+#include <iomanip>
+
 using namespace std;
 
 // Application entry point
@@ -34,7 +36,8 @@ int main(int argc, char *argv[])
 
 	ofstream of("simulatedData.txt");
 	for (m = 0; m < ttemp.size(); m++)
-		of << ttime[m] << "," << ttemp[m] << std::endl;
+		of << std::setprecision(15) << ttime[m] << ","
+		<< std::setprecision(15) <<  ttemp[m] << std::endl;
 	
 	of.close();
 	return 0;//*/
@@ -81,7 +84,7 @@ int main(int argc, char *argv[])
 	if (!tuner.ProcessAutoTuneData(time, temp))
 	{
 		cout << "Auto-tune failed" << endl;
-		return 1;
+		//return 1;
 	}
 
 	cout << "Model parameters:" << endl;

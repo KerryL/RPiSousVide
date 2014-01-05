@@ -177,6 +177,8 @@ bool AutoTuner::ComputeRegressionCoefficients(const std::vector<double> &time,
 		b(i, 0) = temperature[i + 2];// current time step
 	}
 	
+	std::cout << A.GetSubMatrix(0,0,5,3) << std::endl;
+	
 	if (!A.LeftDivide(b, x))
 		return false;
 		
@@ -276,9 +278,9 @@ double AutoTuner::ComputeMeanSampleTime(const std::vector<double> &time) const
 	}
 	
 	outStream << "Average sample time = " << mean << " sec" << std::endl;
-	outStream << "Standard deviation = " << sqrt(d / (time.size() - 1)) << " sec" << std::endl;
+	/*outStream << "Standard deviation = " << sqrt(d / (time.size() - 1)) << " sec" << std::endl;
 	outStream << "Maximum sample time = " << maxDT << " sec" << std::endl;
-	outStream << "Minimum sample time = " << minDT << " sec" << std::endl;
+	outStream << "Minimum sample time = " << minDT << " sec" << std::endl;*/
 	
 	return mean;
 }
@@ -687,9 +689,9 @@ void AutoTuner::BuildSimulationMatrices(double initialTemperature,
 	output = Matrix(1, 3, 1.0, 0.0, 0.0);
 	state = Matrix(3,1, initialTemperature, ambientTemperature, initialHeatLevel);
 	
-	outStream << "Built simulaiton matrices:\n";
+	/*outStream << "Built simulaiton matrices:\n";
 	outStream << "A =\n" << system << "\n\n";
 	outStream << "B =\n" << input << "\n\n";
 	outStream << "C =\n" << output << "\n\n";
-	outStream << "x =\n" << state << "\n" << std::endl;
+	outStream << "x =\n" << state << "\n" << std::endl;*/
 }
