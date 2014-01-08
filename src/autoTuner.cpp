@@ -16,6 +16,24 @@
 
 //==========================================================================
 // Class:			AutoTuner
+// Function:		Constant definitions
+//
+// Description:		Constant definitions for AutoTuner class.
+//
+// Input Arguments:
+//		None
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+double AutoTuner::switchTime(30.0);// [sec]
+
+//==========================================================================
+// Class:			AutoTuner
 // Function:		AutoTuner
 //
 // Description:		Constructor for AutoTuner class.
@@ -54,9 +72,9 @@ AutoTuner::AutoTuner(std::ostream &outStream) : outStream(outStream)
 void AutoTuner::InitializeMembers(void)
 {
 	// Choose invalid values so it's obvious when we have not yet run
-	c1 = 0.000625;//-1.0;
-	c2 = 0.125;//-1.0;
-	tau = 10.0;//-1.0;
+	c1 = -1.0;
+	c2 = -1.0;
+	tau = -1.0;
 
 	kp = -1.0;
 	ti = -1.0;
@@ -114,24 +132,8 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 		return false;
 	}
 
-	if (!ComputeParametersFromCoefficients(x, ComputeMeanSampleTime(time)))
-	{
-		outStream << "Failed to compute system parameters" << std::endl;
-		return false;
-	}
-
-	if (!ComputeAmbientTemperature(time, temperature))
-	{
-		outStream << "Failed to compute ambient temperature" << std::endl;
-		return false;
-	}
-
-	// TODO:  Fix this stuff
-	double a(desiredDamping * desiredBandwidth * feedForwardScale);
-	a = a * a;
-
 	ComputeMaxHeatRate(maxRateScale, referenceTemperature);
-	//ComputeRecommendedGains(desiredBandwidth, desiredDamping, feedForwardScale);
+	ComputeRecommendedGains(desiredBandwidth, desiredDamping, feedForwardScale);
 
 	return MembersAreValid();
 }
@@ -141,12 +143,15 @@ bool AutoTuner::ProcessAutoTuneData(const std::vector<double> &time,
 // Function:		ComputeRegressionCoefficients
 //
 // Description:		Assembles matrices and performs linear regression.  The
-//					regression is based on finding the coefficients for the
-//					difference equation for the open loop system.  We also
-//					assume that the input to the system was 100% during the
-//					time that the auto-tune data was collected.  This allows
-//					us to simplify the numerator of the discrete time transfer
-//					function, leaving us with only three coefficients.
+//					regression is based on finding values for the system
+//					parameters and ambient temperature that result in the
+//					modeled rate of temperature change best matching the
+//					measured rate of temperature change.  Due to the inclusion
+//					of the lag on the heating element, there are actually two
+//					coupled differential equations.  We use a hill-climbing
+//					method to find the time constant for the lag, then use
+//					traditional least-squares regression for the remaining
+//					parameters.
 //
 // Input Arguments:
 //		time		= const std::vector<double>& [sec]
@@ -163,258 +168,158 @@ bool AutoTuner::ComputeRegressionCoefficients(const std::vector<double> &time,
 	const std::vector<double> &temperature, Matrix &x)
 {
 	assert(time.size() == temperature.size());
-	
-	// Ignore first two rows of data, so we subtract 2 from the size
-	Matrix A(time.size() - 2, 3), b(time.size() - 2, 1);
+	Matrix A(time.size() - 1, 3), b(time.size() - 1, 1);
 	unsigned int i;
-	for (i = 0; i < A.GetNumberOfRows(); i++)
+	for (i = 0; i < b.GetNumberOfRows(); i++)
 	{
-		A(i, 0) = 1.0;
-		A(i, 1) = -temperature[i];// 2 time steps ago
-		A(i, 2) = -temperature[i + 1];// 1 time step ago
-		b(i, 0) = temperature[i + 2];// current time step
+		A(i,0) = 1.0;
+		A(i,1) = -temperature[i];
+		// Assign A(i,2) later
+		b(i,0) = (temperature[i + 1] - temperature[i]) / (time[i + 1] - time[i]);
 	}
-	
+
+	if (!PerformHillClimbSearchForTau(time, A, b, tau))
+	{
+		outStream << "Failure while searching for tau" << std::endl;
+		return false;
+	}
+
+	AssignHeatStateValue(time, A, tau);
 	if (!A.LeftDivide(b, x))
 		return false;
-		
-	return true;
-}
 
-//==========================================================================
-// Class:			AutoTuner
-// Function:		ComputeParametersFromCoefficients
-//
-// Description:		The system parameters (c1, c2 and tau) are determined by
-//					setting the coefficients of the difference equation equal
-//					to the hand-solved coefficients from the model, and
-//					solving for the system parameters.  The discrete time
-//					transfer function is:
-//
-//					Y(z)   c2 * ( 1 + 2 * z^-1 + z^-2) * T
-//					---- = -------------------------------
-//					U(z)       O * z^-2 + P * z^-1 + Q
-//
-//					where
-//
-//					O = 4 * tau - 2 * T * (c1 * tau + 1) + c1 * T^2
-//					P = 2 * c1 * T^2 - 8 * tau
-//					Q = c1 * T^2 + 2 * T * (c1 * tau + 1) + 4 * tau
-//					and T is the sampe time for the data
-//
-//					Making the assumtion that the input to the system is 1 for
-//					all time (during the data collection for the auto-tune
-//					process), we can reduce the numerator to:
-//					N = 4 * c2 * T^2
-//
-//					From this and the the z-domain transfer function, we know:
-//					Y(k) = (N - O * Y(k - 2) - P * Y(k - 1)) / Q
-//
-//					So we have:
-//					x(0) = N / Q
-//					x(1) = O / Q
-//					x(2) = P / Q
-//
-// Input Arguments:
-//		x			= const Matrix&
-//		sampleTime	= const double& [sec]
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		true for success, false otherwise
-//
-//==========================================================================
-bool AutoTuner::ComputeParametersFromCoefficients(const Matrix &x,
-	const double &sampleTime)
-{
-	// NOTE:  This process assume an ambient temperature and initial
-	// temperature of zero.  This assumption is unlikely to be true, but in
-	// practice the values of the coefficents seem to be close enough.
-	// Systems with a lot of heat loss and not much power to the heater will
-	// have the most error.
-	c1 = SolveForC1(x(1,0), x(2,0), sampleTime, true);
-    tau = SolveForTau(x(2,0), sampleTime);
-    c2 = SolveForC2(x(0,0), sampleTime);
-
-	// TODO:  Proof that this check is enough to ensure we chose the correct
-	// solution to the quadratic?
-	// Actually, I'm sure this isn't enough...
-	if (SystemParametersAreValid())
-		outStream << "Using plus solution to quadratic" << std::endl;
-	else
-	{
-		c1 = SolveForC1(x(1,0), x(2,0), sampleTime, false);
-		tau = SolveForTau(x(2,0), sampleTime);
-		c2 = SolveForC2(x(0,0), sampleTime);
-		outStream << "Using minus solution to quadratic" << std::endl;
-	}
+	c1 = x(1,0);
+	c2 = x(2,0);
+	ambientTemperature = x(0,0) / c1;
 		
 	return SystemParametersAreValid();
 }
 
 //==========================================================================
 // Class:			AutoTuner
-// Function:		SolveForC1
+// Function:		PerformHillClimbSearchForTau
 //
-// Description:		Solves for C1 from regression coefficients.
-//
-// Input Arguments:
-//		x1				= double
-//		x2				= double
-//		ts				= double, sample time [sec]
-//		plusSolution	= bool indicating which of the two solutions to the
-//						  quadratic to return
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		double, value of c1
-//
-//==========================================================================
-double AutoTuner::SolveForC1(double x1, double x2, double ts, bool plusSolution) const
-{
-	if (plusSolution)
-		return 2.0 * (x1 - 1 + sqrt(x2 * x2 - 4.0 * x1)) / (ts * (x2 - x1 - 1.0));
-
-	return 2.0 * (x1 - 1 - sqrt(x2 * x2 - 4.0 * x1)) / (ts * (x2 - x1 - 1.0));
-}
-
-//==========================================================================
-// Class:			AutoTuner
-// Function:		SolveForC2
-//
-// Description:		Solves for C2 from regression coefficients.
+// Description:		This method performs a hill-climbing in tau search to maximize
+//					the coefficient of determination.
 //
 // Input Arguments:
-//		x0				= double
-//		ts				= double, sample time [sec]
+//		time	= const std::vector<double>& [sec]
+//		A		= Matrix
+//		b		= const Matrix&
 //
 // Output Arguments:
-//		None
+//		tau		= double [sec]
 //
 // Return Value:
-//		double, value of c2
+//		true for success, false otherwise
 //
 //==========================================================================
-double AutoTuner::SolveForC2(double x0, double ts) const
+bool AutoTuner::PerformHillClimbSearchForTau(const std::vector<double> &time,
+	Matrix A, const Matrix &b, double &tau) const
 {
-	return x0 * 0.25 / ts / ts
-		* (c1 * ts * ts + 2.0 * ts * (c1 * tau + 1.0) + 4.0 * tau);
-}
+	const double tolerance(0.01);// [sec], stops the loop when best tau is known within this value
+	const double scaleFactor(1.01);
+	double minTauGuess(0.1), maxTauGuess(1000.0), tauGuess, rSq1, rSq2;
+	const unsigned int iterationLimit(1000);
+	unsigned int iteration;
+	Matrix x;
 
-//==========================================================================
-// Class:			AutoTuner
-// Function:		SolveForTau
-//
-// Description:		Solves for tau from regression coefficients.
-//
-// Input Arguments:
-//		x2				= double
-//		ts				= double, sample time [sec]
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		double, value of tau
-//
-//==========================================================================
-double AutoTuner::SolveForTau(double x2, double ts) const
-{
-	return (ts * ts * c1 * (2.0 - x2) - 2.0 * ts * x2)
-		/ (2.0 * x2 * (c1 * ts + 2.0) + 8.0);
-}
-
-//==========================================================================
-// Class:			AutoTuner
-// Function:		ComputeMeanSampleTime
-//
-// Description:		Computes the mean sample time and prints some statistical
-//					information about the time vector.
-//
-// Input Arguments:
-//		time	= const std::vector<double>&
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		double, average sample time
-//
-//==========================================================================
-double AutoTuner::ComputeMeanSampleTime(const std::vector<double> &time) const
-{
-	double mean((time[time.size() - 1] - time[0]) / (time.size() - 1.0));
-	double d(0.0), minDT(time[time.size() - 1]), maxDT(0.0), dt;
-	unsigned int i;
-	for (i = 1; i < time.size(); i++)
+	for (iteration = 0; iteration < iterationLimit; iteration++)
 	{
-		dt = time[i] - time[i - 1];
-		if (dt < minDT)
-			minDT = dt;
-		if (dt > maxDT)
-			maxDT = dt;
-			
-		d += (dt - mean) * (dt - mean);
+		tauGuess = minTauGuess + 0.5 * (maxTauGuess - minTauGuess);
+		AssignHeatStateValue(time, A, tauGuess);
+		if (!A.LeftDivide(b, x))
+			return false;
+		rSq1 = ComputeCoefficientOfDetermination(b, A * x);
+
+		tauGuess *= scaleFactor;
+		AssignHeatStateValue(time, A, tauGuess);
+		if (!A.LeftDivide(b, x))
+			return false;
+		rSq2 = ComputeCoefficientOfDetermination(b, A * x);
+
+		if (rSq2 > rSq1)// Positive slope
+			minTauGuess = tauGuess / scaleFactor;
+		else
+			maxTauGuess = tauGuess / scaleFactor;
+
+		if (maxTauGuess - minTauGuess < tolerance)
+			break;
 	}
-	
-	outStream << "Average sample time = " << mean << " sec" << std::endl;
-	/*outStream << "Standard deviation = " << sqrt(d / (time.size() - 1)) << " sec" << std::endl;
-	outStream << "Maximum sample time = " << maxDT << " sec" << std::endl;
-	outStream << "Minimum sample time = " << minDT << " sec" << std::endl;*/
-	
-	return mean;
+
+	tau = minTauGuess + 0.5 * (maxTauGuess - minTauGuess);
+
+	return true;
 }
 
 //==========================================================================
 // Class:			AutoTuner
-// Function:		ComputeAmbientTemperature
+// Function:		ComputeCoefficientOfDetermination
 //
-// Description:		Estimates the ambient temperature and stores it in the
-//					member variable.
+// Description:		Given two vectors of values, returns the coefficient of
+//					determination indicating the "goodness of fit" for the
+//					modeled data to the measured data.
 //
 // Input Arguments:
-//		time		= const std::vector<double>& [sec]
-//		temperature	= const std::vector<double>& [deg F]
+//		measured	= const Matrix&
+//		modeled		= const Matrix&
 //
 // Output Arguments:
 //		None
 //
 // Return Value:
-//		bool, true for success, false otherwise
+//		double
 //
 //==========================================================================
-bool AutoTuner::ComputeAmbientTemperature(const std::vector<double> &time,
-		const std::vector<double> &temperature)
+double AutoTuner::ComputeCoefficientOfDetermination(const Matrix &measured,
+	const Matrix &modeled) const
 {
-	assert(time.size() == temperature.size());
-	assert(time.size() > 1);
+	double modeledAverage(0.0);
+	unsigned int i;
+	for (i = 0; i < modeled.GetNumberOfRows(); i++)
+		modeledAverage += modeled(i,0);
+	modeledAverage /= modeled.GetNumberOfRows();
 
-	Matrix A(time.size() - 1, 2), b(time.size() - 1, 1), x;
-	double H(0.0);// [%]
-	double dt;// [sec]
+	double sumSqResiduals(0.0), sumSqTotal(0.0);
+	for (i = 0; i < modeled.GetNumberOfRows(); i++)
+	{
+		sumSqResiduals += (measured(i,0) - modeled(i,0)) * (measured(i,0) - modeled(i,0));
+		sumSqTotal += (measured(i,0) - modeledAverage) * (measured(i,0) - modeledAverage);
+	}
 
+	return 1.0 - sumSqResiduals / sumSqTotal;
+}
+
+//==========================================================================
+// Class:			AutoTuner
+// Function:		AssignHeatStateValue
+//
+// Description:		Assigns the values of the third column of the A matrix
+//					according to the predicted value of the heater state
+//					variable as a function of tau.
+//
+// Input Arguments:
+//		time	= const std::vector<double>& [sec]
+//		A		= Matrix&
+//		tau		= double [sec]
+//
+// Output Arguments:
+//		A		Matrix&
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void AutoTuner::AssignHeatStateValue(const std::vector<double> &time, Matrix &A,
+	double tau) const
+{
+	double heatState(0.0);
 	unsigned int i;
 	for (i = 0; i < A.GetNumberOfRows(); i++)
 	{
-		dt = time[i + 1] - time[i];
-		A(i,0) = c1;
-		A(i,1) = -(c1 * temperature[i] + c2 * H);
-		b(i,0) = (temperature[i + 1] - temperature[i]) / dt;
-		H += (1.0 - H) / tau * dt;
+		A(i,2) = heatState;
+		heatState += (time[i + 1] - time[i]) * (GetControlSignal(time[i]) - heatState) / tau;
 	}
-
-	if (!A.LeftDivide(b, x))
-		return false;
-
-	ambientTemperature = x(0,0);
-	// Check that x(1,0) is close to 1.0?
-	outStream << "x = " << x << std::endl;
-
-	return true;
 }
 
 //==========================================================================
@@ -478,6 +383,10 @@ void AutoTuner::ComputeRecommendedGains(double desiredBandwidth, double desiredD
 	double feedForwardScale)
 {
 	// TODO:  Update for pole placement with 3rd order characteristic polynomial
+	// The information below is valid for a system with tau ~= 0, but for real systems
+	// the results will be inexact.  It is likely that this is good enough, so we'll
+	// leave it for now.  If we need to readress it, we may also need to add a derivative
+	// term to the controller to allow us to place all three poles where we want them.
 	
 	// The denominator of the closed-loop system transfer function is:
 	//   s^2 / c2 + (Kp + c1 / c2) * s + Kp / Ti
@@ -528,39 +437,8 @@ void AutoTuner::ComputeRecommendedGains(double desiredBandwidth, double desiredD
 bool AutoTuner::MembersAreValid(void) const
 {
 	bool valid(true);
-	valid = ModelParametersAreValid() && valid;
+	valid = SystemParametersAreValid() && valid;
 	valid = ControllerParametersAreValid() && valid;
-
-	return valid;
-}
-
-//==========================================================================
-// Class:			AutoTuner
-// Function:		ModelParametersAreValid
-//
-// Description:		Checks values of model parameters for validity (to see if
-//					open-loop simulation value are OK).
-//
-// Input Arguments:
-//		None
-//
-// Output Arguments:
-//		None
-//
-// Return Value:
-//		bool, true for success, false otherwise
-//
-//==========================================================================
-bool AutoTuner::ModelParametersAreValid(void) const
-{
-	bool valid(SystemParametersAreValid());
-
-	if (ambientTemperature < -459.670000)
-	{
-		outStream << "Invalid Auto-Tune Result:  Ambient temperature is below absolue zero (ambient temperature = "
-			<< ambientTemperature << " deg F)" << std::endl;
-		valid = false;
-	}
 
 	return valid;
 }
@@ -573,7 +451,8 @@ bool AutoTuner::ModelParametersAreValid(void) const
 //					system identification).
 //
 // Input Arguments:
-//		None
+//		checkTemperature	= bool, indicating whether or not we should check
+//							  the value of ambientTemperature
 //
 // Output Arguments:
 //		None
@@ -582,7 +461,7 @@ bool AutoTuner::ModelParametersAreValid(void) const
 //		bool, true for success, false otherwise
 //
 //==========================================================================
-bool AutoTuner::SystemParametersAreValid(void) const
+bool AutoTuner::SystemParametersAreValid(bool checkTemperature) const
 {
 	bool valid(true);
 
@@ -604,6 +483,13 @@ bool AutoTuner::SystemParametersAreValid(void) const
 	{
 		outStream << "Invalid Auto-Tune Result:  Model parameter tau is negative (tau = "
 			<< tau << " sec)" << std::endl;
+		valid = false;
+	}
+
+	if (checkTemperature && ambientTemperature < -459.670000)
+	{
+		outStream << "Invalid Auto-Tune Result:  Ambient temperature is below absolue zero (ambient temperature = "
+			<< ambientTemperature << " deg F)" << std::endl;
 		valid = false;
 	}
 
@@ -752,7 +638,7 @@ bool AutoTuner::GetSimulatedOpenLoopResponse(const std::vector<double> &time,
 	assert(time.size() == control.size());
 	
 	// System instead of model because ambient temperature is specified explicitly
-	if (!SystemParametersAreValid())
+	if (!SystemParametersAreValid(false))
 		return false;
 		
 	BuildSimulationMatrices(initialTemperature, ambientTemperature, initialHeatOutput);
@@ -802,10 +688,11 @@ void AutoTuner::ComputeNextTimeStep(const double &control, const double &deltaTi
 // Class:			AutoTuner
 // Function:		GetMinimumAutoTuneTime
 //
-// Description:		Computes the minimum time to collect data for good auto-tune results.
+// Description:		Computes the minimum time to collect data for good
+//					auto-tune results.
 //
 // Input Arguments:
-//		sampleRate		= double, frequency at which data is collected [Hz]
+//		sampleRate	= double, frequency at which data is collected [Hz]
 //
 // Output Arguments:
 //		None
@@ -814,10 +701,9 @@ void AutoTuner::ComputeNextTimeStep(const double &control, const double &deltaTi
 //		double, [sec]
 //
 //==========================================================================
-double AutoTuner::GetMinimumAutoTuneTime(double /*sampleRate*/)
+double AutoTuner::GetMinimumAutoTuneTime(double sampleRate)
 {
-	// TODO:  Fix this
-	return 0.0;//ignoreInitialTime + (ambTempSegments + 1) / sampleRate;
+	return 3.0 * switchTime / sampleRate;
 }
 
 //==========================================================================
@@ -852,4 +738,54 @@ void AutoTuner::BuildSimulationMatrices(double initialTemperature,
 	outStream << "B =\n" << input << "\n\n";
 	outStream << "C =\n" << output << "\n\n";
 	outStream << "x =\n" << state << "\n" << std::endl;*/
+}
+
+//==========================================================================
+// Class:			AutoTuner
+// Function:		GetControlSignal
+//
+// Description:		Returns the control signal corresponding to the specified
+//					time.  This method can be called from the controller while
+//					generating auto-tune data, and then again when fitting the
+//					data to ensure that the actual command used is the one
+//					expected by the auto tuner.
+//
+// Input Arguments:
+//		time	= double [sec]
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		double
+//
+//==========================================================================
+double AutoTuner::GetControlSignal(double time)
+{
+	return (int)floor(time / switchTime) % 2 == 0 ? 1.0 : 0.5;
+}
+
+//==========================================================================
+// Class:			AutoTuner
+// Function:		DefineParameters
+//
+// Description:		Provides a means of directly setting the system parameters.
+//
+// Input Arguments:
+//		c1	= double
+//		c2	= double
+//		tau	= double
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		None
+//
+//==========================================================================
+void AutoTuner::DefineParameters(double c1, double c2, double tau)
+{
+	this->c1 = c1;
+	this->c2 = c2;
+	this->tau = tau;
 }

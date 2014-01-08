@@ -7,6 +7,7 @@
 // Standard C++ headers
 #include <cstdlib>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <string>
 #include <sstream>
@@ -14,34 +15,40 @@
 // Local headers
 #include "autoTuner.h"
 
-#include <iomanip>
-
 using namespace std;
+
+void CreateData()
+{
+	std::vector<double> temp, time, ctrl;
+	unsigned int i;
+	for (i = 0; i < 1000; i++)
+	{
+		time.push_back(i * 0.1);
+		ctrl.push_back(AutoTuner::GetControlSignal(time[i]));
+	}
+	
+	AutoTuner at;
+	double initTemp(60.0), ambTemp(62.0), c1(0.000625), c2(0.125), tau(10.0);
+	at.DefineParameters(c1, c2, tau);
+	at.GetSimulatedOpenLoopResponse(time, ctrl, temp, initTemp, ambTemp);
+
+	stringstream fileName;
+	fileName << "simulatedData-" << c1 << "," << c2 << ","
+		<< tau << "," << ambTemp << ".txt";
+	ofstream of(fileName.str().c_str());
+	for (i = 0; i < temp.size(); i++)
+		of << std::setprecision(15) << time[i] << ","
+		<< std::setprecision(15) <<  temp[i] << std::endl;
+	
+	of.close();
+}
 
 // Application entry point
 int main(int argc, char *argv[])
 {	
-	// TODO:  Remove below code for generating test data
-	/*std::vector<double> ttemp, ttime, ctrl;
-	unsigned int m;
-	for (m = 0; m < 1000; m++)
-	{
-		ttime.push_back(m * 0.1);
-		ctrl.push_back(1.0);
-	}
-	
-	AutoTuner at;
-	double initTemp(62.0), ambTemp(60.0);
-	at.GetSimulatedOpenLoopResponse(ttime, ctrl, ttemp, initTemp, ambTemp);
-
-	ofstream of("simulatedData.txt");
-	for (m = 0; m < ttemp.size(); m++)
-		of << std::setprecision(15) << ttime[m] << ","
-		<< std::setprecision(15) <<  ttemp[m] << std::endl;
-	
-	of.close();
+	/*CreateData();
 	return 0;//*/
-	
+
 	if (argc != 2)
 	{
 		cout << "Usage:  " << argv[0] << " pathToFile" << endl;
@@ -84,7 +91,7 @@ int main(int argc, char *argv[])
 	if (!tuner.ProcessAutoTuneData(time, temp))
 	{
 		cout << "Auto-tune failed" << endl;
-		//return 1;
+		return 1;
 	}
 
 	cout << "Model parameters:" << endl;
@@ -102,7 +109,10 @@ int main(int argc, char *argv[])
 	cout << "  Ambient Temp. = " << tuner.GetAmbientTemperature() << " deg F" << endl;
 
 	std::vector<double> simulatedTemp;
-	std::vector<double> controlInput(time.size(), 1.0);
+	std::vector<double> controlInput;
+	unsigned int i;
+	for (i = 0; i < time.size(); i++)
+		controlInput.push_back(AutoTuner::GetControlSignal(time[i]));
 	cout << endl << "Simulating time response..." << endl;
 	if (!tuner.GetSimulatedOpenLoopResponse(time, controlInput, simulatedTemp))
 	{
@@ -125,7 +135,6 @@ int main(int argc, char *argv[])
 	simResults << "Time,Actual Temperature,SimulatedTemperature" << endl;
 	simResults << "[sec],[deg F],[deg F]" << endl;
 
-	unsigned int i;
 	for (i = 0; i < time.size(); i++)
 		simResults << time[i] << "," << temp[i] << "," << simulatedTemp[i] << endl;
 

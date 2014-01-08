@@ -1,0 +1,88 @@
+/* [wxMaxima batch file version 1] [ DO NOT EDIT BY HAND! ]*/
+/* [ Created with wxMaxima version 13.04.2 ] */
+
+/* [wxMaxima: input   start ] */
+kill(all);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Define system parameters
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+c1=c1Val:1/1600;
+c2=c2Val:1/8;
+tau=tauVal:10;
+T=TVal:1/10;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+N=N:4*c2*T^2;
+O=O:c1*T^2-2*T*(c1*tau+1)+4*tau;
+P=P:2*c1*T^2-8*tau;
+Q=Q:c1*T^2+2*T*(c1*tau+1)+4*tau;
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+N=float(subst([c1=c1Val,c2=c2Val,tau=tauVal,T=TVal],N));
+O=float(subst([c1=c1Val,c2=c2Val,tau=tauVal,T=TVal],O));
+P=float(subst([c1=c1Val,c2=c2Val,tau=tauVal,T=TVal],P));
+Q=float(subst([c1=c1Val,c2=c2Val,tau=tauVal,T=TVal],Q));
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Determine the coefficients of the difference equation, using the true system parameters.
+This is the last time the true value of the system parameters is used - from here on, we
+calculate the system parameter values using x1, x2, and x3
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+x1Val:subst([c1=c1Val,c2=c2Val,tau=tauVal,T=TVal],N/Q);
+x2Val:subst([c1=c1Val,c2=c2Val,tau=tauVal,T=TVal],O/Q);
+x3Val:subst([c1=c1Val,c2=c2Val,tau=tauVal,T=TVal],P/Q);
+x1=float(x1Val);
+x2=float(x2Val);
+x3=float(x3Val);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Determine the expressions for c1, c2 and tau
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+tau:solve(x3=P/Q,tau)[1];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+c2:solve(x1=N/Q,c2)[1];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Note that we have to choose one of the two solutions to the quadratic
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+c1:solve(subst([x1=N/Q,x3=P/Q,tau],x2=O/Q),c1)[1];
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: comment start ]
+Now evaluate the system parameter values numerically to show that they match the original values
+   [wxMaxima: comment end   ] */
+
+/* [wxMaxima: input   start ] */
+float(c1:subst([x1=x1Val,x2=x2Val,x3=x3Val,T=TVal],c1));
+float(c1Val);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+float(tau:subst([x1=x1Val,x2=x2Val,x3=x3Val,T=TVal,c1],tau));
+float(tauVal);
+/* [wxMaxima: input   end   ] */
+
+/* [wxMaxima: input   start ] */
+float(c2:subst([x1=x1Val,x2=x2Val,x3=x3Val,T=TVal,c1,tau],c2));
+float(c2Val);
+/* [wxMaxima: input   end   ] */
+
+/* Maxima can't load/batch files which end with a comment! */
+"Created with wxMaxima"$

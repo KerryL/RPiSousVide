@@ -125,7 +125,7 @@ SousVide::SousVide(bool autoTune)
 
 	if (autoTune)
 	{
-		std::cout << "System started in auto-tune mode" << std::endl;
+		logger << "System started in auto-tune mode" << std::endl;
 		nextState = StateAutoTune;
 	}
 }
@@ -184,7 +184,7 @@ bool SousVide::Initialize(void)
 	logFile.open(logFileName.c_str(), std::ios::out);
 	if (!logFile.is_open() || !logFile.good())
 	{
-		std::cout << "Failed to open '" << logFileName << "' for output" << std::endl;
+		logger << "Failed to open '" << logFileName << "' for output" << std::endl;
 		return false;
 	}
 	logger.Add(new Logger(logFile));
@@ -283,7 +283,7 @@ void SousVide::Run()
 {
 	if (!Initialize())
 	{
-		std::cout << "Initialization failed" << std::endl;
+		logger << "Initialization failed" << std::endl;
 		return;
 	}
 
@@ -848,6 +848,7 @@ void SousVide::ExitState(void)
 			logger << "Model parameters:" << std::endl;
 			logger << "  c1 = " << tuner.GetC1() << " 1/sec" << std::endl;
 			logger << "  c2 = " << tuner.GetC2() << " deg F/BTU" << std::endl;
+			logger << "  tau = " << tuner.GetTau() << " sec" << std::endl;
 
 			logger << "Recommended Gains:" << std::endl;
 			logger << "  Kp = " << tuner.GetKp() << " %/deg F" << std::endl;
@@ -864,7 +865,11 @@ void SousVide::ExitState(void)
 			configuration->WriteConfiguration(configFileName, "kf", tuner.GetKf());
 			configuration->WriteConfiguration(configFileName, "maxHeatingRate", tuner.GetMaxHeatRate());
 			
-			std::vector<double> control(time.size(), 1.0), simTemp;
+			std::vector<double> control, simTemp;
+			unsigned int i;
+			for (i = 0; i < time.size(); i++)
+				control.push_back(AutoTuner::GetControlSignal(time[i]));
+
 			if (!tuner.GetSimulatedOpenLoopResponse(time, control, simTemp, temp[0]))
 				logger << "Simulation failed" << std::endl;
 
@@ -881,7 +886,6 @@ void SousVide::ExitState(void)
 			file << "Time,Actual Temperature,SimulatedTemperature" << std::endl;
 			file << "[sec],[deg F],[deg F]" << std::endl;
 
-			unsigned int i;
 			for (i = 0; i < time.size(); i++)
 				file << time[i] << "," << temp[i] << "," << simTemp[i] << std::endl;
 

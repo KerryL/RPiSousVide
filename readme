@@ -57,9 +57,9 @@ $ git submodule update --recursive
 
 7.  Build RPiSousVide using the included makefile (make changes as appropriate if you didn't exactly follow the instructions above), and copy to your Raspberry Pi.  Note that re-building can be carried out by using '$make clean' followed by '$make' if using the included makefile.
 
-6.  Configure Raspberry Pi to use application as a service... TODO - let's get the thing built first
+8.  Configure Raspberry Pi to use application as a service... TODO - let's get the thing built first
 
-7.  Describe required connections, hardware plans, anything else? TODO
+9.  Describe required connections, hardware plans, anything else? TODO
 https://projects.drogon.net/raspberry-pi/wiringpi/pins/
 
 
