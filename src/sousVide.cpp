@@ -638,7 +638,6 @@ void SousVide::EnterState(void)
 		SetUpAutoTuneLog();
 		
 		controller->SetOutputEnable(false);
-		controller->DirectlySetPWMDuty(1.0);
 		startTemperature = controller->GetActualTemperature();
 		
 		logger << "Auto-tune will stop in "
@@ -772,6 +771,9 @@ void SousVide::ProcessState(void)
 
 		time_t now = time(NULL);
 		double autoTuneTime = difftime(now, stateStartTime);
+		controller->DirectlySetPWMDuty(
+			AutoTuner::GetControlSignal(autoTuneTime));
+
 		double minAutoTuneTime = AutoTuner::GetMinimumAutoTuneTime(configuration->system.idleFrequency);
 		assert(minAutoTuneTime < configuration->system.maxAutoTuneTime);
 		if ((autoTuneTime > configuration->system.maxAutoTuneTime ||
