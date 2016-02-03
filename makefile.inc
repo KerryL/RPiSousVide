@@ -9,7 +9,8 @@
 INCDIRS_TEMP = \
 	/usr/local/include \
 	$(CURDIR)/src \
-	$(CURDIR)/src/utilities
+	$(CURDIR)/src/utilities \
+	$(RPI)/include
 
 INCDIRS = $(addprefix -I,$(INCDIRS_TEMP))
 
@@ -17,7 +18,7 @@ INCDIRS = $(addprefix -I,$(INCDIRS_TEMP))
 # DO NOT include the -L prefix to these paths - it will
 # be added automatically
 LIBDIRS_TEMP = \
-	/usr/local/lib
+	$(RPI)/lib
 
 LIBDIRS = $(addprefix -L,$(LIBDIRS_TEMP))
 
