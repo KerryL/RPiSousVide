@@ -1,4 +1,4 @@
-// File:  linuxSocket.h
+// File:  linuxSocket.cpp
 // Date:  9/3/2013
 // Auth:  K. Loux
 // Copy:  (c) Copyright 2013
